@@ -1,3 +1,5 @@
+import xml.etree.ElementTree as ElementTree
+
 from collections import Counter
 
 class PomModel:
@@ -54,3 +56,27 @@ class PomModel:
         
     def print(self):
         print(self.tagmap)
+
+class PomParse:
+    def __init__(self, filename, model=None):
+        self.etree = ElementTree.parse(filename)
+        self.root = self.etree.getroot()
+
+        if model is None:
+            self.model = PomModel()
+        else:
+            self.model = model
+
+    def flatten(self, tag=None, location="."):
+        if tag is None:
+            tag = self.root
+
+        self.model.processTag(tag, location)
+
+        location = "%s/%s" % (location, self.model.removeNamespace(tag.tag))
+
+        for child in tag:
+            self.flatten(child, location)
+
+    def getModel(self):
+        return self.model

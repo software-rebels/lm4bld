@@ -1,0 +1,7 @@
+niter: 1
+nfolds: 2
+minorder: 2
+maxorder: 2
+
+projects:
+  activemq: pomlists/activemq.txt

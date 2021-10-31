@@ -16,26 +16,47 @@ class PomTokenizer:
     def __init__(self, filename):
         self.fhandle = open(filename, 'r')
 
-    def removeComments(self, strdata):
-        pattern = re.compile(r"\<\!\-\-[\s\S]*?\-\-\>")
+    def preprocess_strings(self, strdata):
+        # Comments
+        comment_cleanup = re.compile(r"\<\!\-\-[\s\S]*?\-\-\>")
+        strdata = re.sub(comment_cleanup, "", strdata)
 
-        return re.sub(pattern, "", strdata)
+        # Version strings
+        version_cleanup = re.compile(r"\d+(?:\.[v\d]+)+(?:[-\w]*)?")
+        strdata =re.sub(version_cleanup, "<VERSNUM>", strdata)
+
+        # Path strings
+        path_cleanup = re.compile(r"\w+(?:\/[\w\.\*\-]+)+")
+        strdata = re.sub(path_cleanup, "<PATHSTR>", strdata)
+
+        return strdata
 
     def tokenize(self):
-        strdata = self.removeComments(self.fhandle.read())
+        strdata = self.preprocess_strings(self.fhandle.read())
 
         tokenizer = RegexpTokenizer(
-            '[\"\'][\s\S]*?[\"\']|\n|\<\?|\?\>|\<\/|\/\>|\=|\.|\,|\:|\;|\-|\(|\)|\{|\}|\[|\]|\!|\@|\#|\$|\%|\^|\&|\*|\+|\~|\/|\<|\>|\w+')
+            #'[\"\'][\s\S]*?[\"\']|\d+(?:\.\d+)+(?:[-\w]*)?|\w+(?:\/[\w\.\*\-]+)+|\w+(?:\.\w+)+|\n|\<\?|\?\>|\<\/|\/\>|\=|\.|\,|\:|\;|\-|\(|\)|\{|\}|\[|\]|\!|\@|\#|\$|\%|\^|\&|\*|\+|\~|\/|\<|\>|\w+')
+            '[\"\']|\n|\<\?|\?\>|\<\/|\/\>|\=|\.|\,|\:|\;|\-|\(|\)|\{|\}|\[|\]|\!|\@|\#|\$|\%|\^|\&|\*|\+|\~|\/|\<|\>|\w+')
 
         return tokenizer.tokenize(strdata)
 
     # Not sure if we should do this for Maven
-    def normalize(self, sent):
-        return sent.lower()
+    def normalize(self, tok):
+        return tok.lower()
 
     def sentence_tokenize(self):
         sents = list()
         toks = self.tokenize()
+
+        
+       # if tok.startswith("\"") or tok.startswith("\'"):
+       #     tok = "<STRLIT>"
+       # elif re.match(r"\d+(?:\.\d+)+(?:[-\w]*)?", tok):
+       #     tok = "<VERSNUM>"
+       # elif re.match(r"\w+(?:\/[\w\.\*\-]+)+", tok):
+       #     tok = "<PATHLIT>"
+       # elif re.match(r"\w+(?:\.\w+)+", tok):
+       #     tok = "<URI>"
 
         sent = list()
         for tok in toks:
@@ -50,9 +71,9 @@ class PomTokenizer:
 class PomNGramModel:
     def __init__(self, order):
         self.order = order
-        #self.model = Lidstone(0.01, self.order)
+        self.model = Lidstone(0.00017, self.order)
         empty_vocab = Vocabulary(unk_cutoff=1)
-        self.model = AbsoluteDiscountingInterpolated(self.order, vocabulary=empty_vocab)
+        #self.model = AbsoluteDiscountingInterpolated(self.order, vocabulary=empty_vocab)
 
     def fit(self, train_sents):
         train_corp, vocab = padded_everygram_pipeline(self.order, train_sents)
@@ -61,22 +82,16 @@ class PomNGramModel:
     def crossEntropy(self, ngrams):
         return self.model.entropy(ngrams)
 
-    def unkRate(self, sents):
+    def unkRate(self, ngrams):
         unk_count = 0
-        unigrams = set()
-        for sent in sents:
-            unigrams.update(list(ngrams(sent, 1)))
 
-        for gram in unigrams:
+        for gram in ngrams:
             gram_or_unk = self.model.vocab.lookup(gram)
             if (gram_or_unk[0] == "<UNK>"):
-                print(gram)
+                #print(gram)
                 unk_count += 1
 
-        print(unk_count)
-        print(len(unigrams))
-
-        return unk_count / len(unigrams)
+        return unk_count / len(ngrams)
 
 class PomNLPExperiment:
     def __init__(self, pomlistfile, order):
@@ -115,11 +130,11 @@ class PomNLPExperiment:
             paddedTokens = list(pad_both_ends(sent, n=self.order))
             ngrams += list(everygrams(paddedTokens, max_len=self.order))
 
-        #return fitter.crossEntropy(ngrams)
-        return fitter.unkRate(sents)
+        return fitter.unkRate(ngrams), fitter.crossEntropy(ngrams)
 
     def nFoldValidation(self, nfolds=10, niter=1):
-        resultsList = list()
+        unk_rates = list()
+        entropies = list()
 
         for i in range(niter):
             myFolds = self.getFolds(nfolds)
@@ -138,10 +153,12 @@ class PomNLPExperiment:
                 fitter.fit(trainCorpus)
 
                 # Test it on testing corpus
-                resultsList.append(self.testModel(fitter, testCorpus))
+                unk_rate, ent = self.testModel(fitter, testCorpus)
+                unk_rates.append(unk_rate)
+                entropies.append(ent)
 
         # Return results list
-        return resultsList
+        return unk_rates, entropies
 
 class PomNLPMultirunExperiment:
     def __init__(self, pomlistfile, minorder, maxorder):
@@ -150,10 +167,14 @@ class PomNLPMultirunExperiment:
         self.maxorder = maxorder
 
     def perform(self, nfolds=10, niter=1):
-        results = {}
+        unk_rates = {}
+        ents = {}
 
         for order in range(self.minorder, (self.maxorder+1)):
+            print(f"Order: {order}")
             exp = PomNLPExperiment(self.pomlistfile, order)
-            results[order] = exp.nFoldValidation(nfolds, niter)
+            unk_rate, ent = exp.nFoldValidation(nfolds, niter)
+            unk_rates[order] = unk_rate
+            ents[order] = ent
 
-        return results
+        return unk_rates, ents

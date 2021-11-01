@@ -94,7 +94,8 @@ class PomNGramModel:
         return unk_count / len(ngrams)
 
 class PomNLPExperiment:
-    def __init__(self, pomlistfile, order):
+    def __init__(self, project, pomlistfile, order):
+        self.project = project
         self.order = order
 
         fhandle = open(pomlistfile, 'r')
@@ -133,19 +134,15 @@ class PomNLPExperiment:
         return fitter.unkRate(ngrams), fitter.crossEntropy(ngrams)
 
     def nFoldValidation(self, nfolds=10, niter=1):
-        unk_rates = list()
-        entropies = list()
-
-        for i in range(niter):
+        for iteration in range(niter):
             myFolds = self.getFolds(nfolds)
 
-            for testIdx in range(nfolds):
-                print("Fold %i (iteration %i)" % (testIdx, i))
-                testCorpus = myFolds[testIdx]
+            for fold in range(nfolds):
+                testCorpus = myFolds[fold]
 
                 trainCorpus = list()
                 for trainIdx in range(nfolds):
-                    if trainIdx != testIdx:
+                    if trainIdx != fold:
                         trainCorpus += myFolds[trainIdx]
 
                 # Train model on training corpus
@@ -153,28 +150,18 @@ class PomNLPExperiment:
                 fitter.fit(trainCorpus)
 
                 # Test it on testing corpus
-                unk_rate, ent = self.testModel(fitter, testCorpus)
-                unk_rates.append(unk_rate)
-                entropies.append(ent)
-
-        # Return results list
-        return unk_rates, entropies
+                unk_rate, entropy = self.testModel(fitter, testCorpus)
+                print(f'{self.project},unk_rate,{unk_rate},{self.order},{fold},{iteration}')
+                print(f'{self.project},entropy,{entropy},{self.order},{fold},{iteration}')
 
 class PomNLPMultirunExperiment:
-    def __init__(self, pomlistfile, minorder, maxorder):
+    def __init__(self, project, pomlistfile, minorder, maxorder):
+        self.project = project
         self.pomlistfile = pomlistfile
         self.minorder = minorder
         self.maxorder = maxorder
 
     def perform(self, nfolds=10, niter=1):
-        unk_rates = {}
-        ents = {}
-
         for order in range(self.minorder, (self.maxorder+1)):
-            print(f"Order: {order}")
-            exp = PomNLPExperiment(self.pomlistfile, order)
-            unk_rate, ent = exp.nFoldValidation(nfolds, niter)
-            unk_rates[order] = unk_rate
-            ents[order] = ent
-
-        return unk_rates, ents
+            exp = PomNLPExperiment(self.project, self.pomlistfile, order)
+            exp.nFoldValidation(nfolds, niter)

@@ -29,7 +29,6 @@ projects:
   chemistry: pomlists/chemistry.txt
   clerezza: pomlists/clerezza.txt
   cloudstack: pomlists/cloudstack.txt
-  cocoon: pomlists/cocoon.txt
   commons: pomlists/commons.txt
   creadur: pomlists/creadur.txt
   ctakes: pomlists/ctakes.txt
@@ -98,7 +97,6 @@ projects:
   phoenix: pomlists/phoenix.txt
   pinot: pomlists/pinot.txt
   pivot: pomlists/pivot.txt
-  plastic: pomlists/plastic.txt
   plc4x: pomlists/plc4x.txt
   portals: pomlists/portals.txt
   pulsar: pomlists/pulsar.txt

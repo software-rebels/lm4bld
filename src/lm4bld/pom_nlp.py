@@ -1,4 +1,6 @@
+import concurrent.futures
 import itertools
+import os
 import random
 import re
 
@@ -133,26 +135,35 @@ class PomNLPExperiment:
 
         return fitter.unkRate(ngrams), fitter.crossEntropy(ngrams)
 
-    def nFoldValidation(self, nfolds=10, niter=1):
+    def doFold(self, myFolds, fold, nfolds, iteration):
+        testCorpus = myFolds[fold]
+
+        trainCorpus = list()
+        for trainIdx in range(nfolds):
+            if trainIdx != fold:
+                trainCorpus += myFolds[trainIdx]
+
+        # Train model on training corpus
+        fitter = PomNGramModel(self.order)
+        fitter.fit(trainCorpus)
+
+        # Test it on testing corpus
+        unk_rate, entropy = self.testModel(fitter, testCorpus)
+
+        return unk_rate, entropy, fold, iteration, self.order
+
+    def nFoldValidation(self, executor, nfolds=10, niter=1):
+        my_futures = list()
+
         for iteration in range(niter):
             myFolds = self.getFolds(nfolds)
 
             for fold in range(nfolds):
-                testCorpus = myFolds[fold]
+                f = executor.submit(self.doFold, myFolds, fold, nfolds,
+                                    iteration)
+                my_futures.append(f)
 
-                trainCorpus = list()
-                for trainIdx in range(nfolds):
-                    if trainIdx != fold:
-                        trainCorpus += myFolds[trainIdx]
-
-                # Train model on training corpus
-                fitter = PomNGramModel(self.order)
-                fitter.fit(trainCorpus)
-
-                # Test it on testing corpus
-                unk_rate, entropy = self.testModel(fitter, testCorpus)
-                print(f'{self.project},unk_rate,{unk_rate},{self.order},{fold},{iteration}')
-                print(f'{self.project},entropy,{entropy},{self.order},{fold},{iteration}')
+        return my_futures
 
 class PomNLPMultirunExperiment:
     def __init__(self, project, pomlistfile, minorder, maxorder):
@@ -161,7 +172,23 @@ class PomNLPMultirunExperiment:
         self.minorder = minorder
         self.maxorder = maxorder
 
-    def perform(self, nfolds=10, niter=1):
+    def perform(self, nfolds=10, niter=1, maxjobs=None):
+        if (maxjobs is None):
+            maxjobs = os.cpu_count()
+
+        executor = concurrent.futures.ProcessPoolExecutor(max_workers=maxjobs)
+        futures_list = list()
+
         for order in range(self.minorder, (self.maxorder+1)):
             exp = PomNLPExperiment(self.project, self.pomlistfile, order)
-            exp.nFoldValidation(nfolds, niter)
+            futures_list += exp.nFoldValidation(executor, nfolds, niter)
+
+        for future in concurrent.futures.as_completed(futures_list):
+            assert (future.done() and not future.cancelled()
+                    and future.exception() is None)
+
+            unk_rate, entropy, fold, iteration, order = future.result()
+            print(f'{self.project},unk_rate,{unk_rate},{order},{fold},{iteration}')
+            print(f'{self.project},entropy,{entropy},{order},{fold},{iteration}')
+
+        executor.shutdown()

@@ -1,7 +1,8 @@
 niter: 1
 nfolds: 10
 minorder: 1
-maxorder: 5
+maxorder: 10
+maxjobs: 28
 
 projects:
   accumulo: pomlists/accumulo.txt

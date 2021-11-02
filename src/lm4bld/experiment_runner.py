@@ -10,6 +10,7 @@ NFOLDS = 'nfolds'
 MINORDER = 'minorder'
 MAXORDER = 'maxorder'
 PROJECTS = 'projects'
+MAXJOBS = 'maxjobs'
 
 def process_experimental_config(fname):
     fhandle = open(fname, 'r')
@@ -24,7 +25,7 @@ def main():
         exp = pom_nlp.PomNLPMultirunExperiment(projname, pomlist, confdata[MINORDER],
                                                confdata[MAXORDER])
 
-        exp.perform(confdata[NFOLDS], confdata[NITER])
+        exp.perform(confdata[NFOLDS], confdata[NITER], confdata[MAXJOBS])
 
 if __name__ == "__main__":
     main()

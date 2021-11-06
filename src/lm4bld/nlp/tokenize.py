@@ -1,41 +1,49 @@
 import re
 
 from nltk.tokenize import RegexpTokenizer
+from abc import ABCMeta, abstractmethod
 
-class PomTokenizer:
+class AbstractTokenizer(metaclass=ABCMeta):
     def __init__(self, filename, versions, paths):
         self.fhandle = open(filename, 'r')
         self.versions = versions 
         self.paths = paths
 
+    def version_re(self):
+        return re.compile(r"\d+(?:\.[v\d]+)+(?:[-\w]*)?")
+
+    def path_re(self):
+        return re.compile(r"\w+(?:\/[\w\.\*\-]+)+")
+
+    @abstractmethod
+    def comment_re(self):
+        raise NotImplementedError()
+
+    @abstractmethod
+    def tokenizer(self):
+        raise NotImplementedError()
+
     def preprocess_strings(self, strdata):
-        # Comments
-        comment_cleanup = re.compile(r"\<\!\-\-[\s\S]*?\-\-\>")
+        comment_cleanup = self.comment_re()
         strdata = re.sub(comment_cleanup, "", strdata)
 
-        # Version strings
         if (self.versions):
-            version_cleanup = re.compile(r"\d+(?:\.[v\d]+)+(?:[-\w]*)?")
+            version_cleanup = self.version_re()
             strdata =re.sub(version_cleanup, "<VERSNUM>", strdata)
 
-        # Path strings
         if (self.paths):
-            path_cleanup = re.compile(r"\w+(?:\/[\w\.\*\-]+)+")
+            path_cleanup = self.path_re()
             strdata = re.sub(path_cleanup, "<PATHSTR>", strdata)
 
         return strdata
 
     def tokenize(self):
         strdata = self.preprocess_strings(self.fhandle.read())
+        return self.tokenizer().tokenize(strdata)
 
-        tokenizer = RegexpTokenizer(
-            '[\"\']|\n|\<\?|\?\>|\<\/|\/\>|\=|\.|\,|\:|\;|\-|\(|\)|\{|\}|\[|\]|\!|\@|\#|\$|\%|\^|\&|\*|\+|\~|\/|\<|\>|\w+')
-
-        return tokenizer.tokenize(strdata)
-
-    # Not sure if we should do this for Maven
+    # Default case: Do nothing
     def normalize(self, tok):
-        return tok.lower()
+        return tok
 
     def sentence_tokenize(self):
         sents = list()
@@ -50,3 +58,21 @@ class PomTokenizer:
                 sent.append(self.normalize(tok))
 
         return sents
+
+class PomTokenizer(AbstractTokenizer):
+    def comment_re(self):
+        return re.compile(r"\<\!\-\-[\s\S]*?\-\-\>")
+
+    def tokenizer(self):
+        return RegexpTokenizer('[\"\']|\n|\<\?|\?\>|\<\/|\/\>|\=|\.|\,|\:|\;|\-|\(|\)|\{|\}|\[|\]|\!|\@|\#|\$|\%|\^|\&|\*|\+|\~|\/|\<|\>|\w+')
+
+    # Not sure if we should do this for Maven
+    def normalize(self, tok):
+        return tok.lower()
+
+class JavaTokenizer(AbstractTokenizer):
+    def comment_re(self):
+        return re.compile(r"\/\*.*?\*\/|\/\/.*?")
+
+    def tokenizer(self):
+        return RegexpTokenizer('[\"\']|\n|\=|\.|\,|\:|\;|\-|\(|\)|\{|\}|\[|\]|\!|\@|\#|\$|\%|\^|\&|\*|\+|\~|\/|\<|\>|\w+')

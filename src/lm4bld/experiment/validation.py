@@ -11,22 +11,17 @@ from lm4bld.nlp.tokenize import JavaTokenizer
 from lm4bld.nlp.tokenize import PomTokenizer
 
 class NLPValidator(metaclass=ABCMeta):
-    def __init__(self, project, conf, order, listfile, tokenizer):
+    def __init__(self, project, conf, order, listfile):
         self.project = project
         self.order = order 
         self.versions = conf.get_versions()
         self.paths = conf.get_paths()
-        self.tokenizer = tokenizer
 
-        fhandle = open(listfile, 'r')
         self.listfiles = list()
         self.allSents = list()
-        for file in fhandle.readlines():
-            pomfile = file.strip()
-            self.listfiles.append(pomfile)
-            t = tokenizer(pomfile, self.versions, self.paths)
-            self.allSents += t.sentence_tokenize()
 
+        # TODO: Was looped when reading through listfile
+        # self.listfiles.append(fname)
         random.seed(666)
 
     def getSents(self):
@@ -282,3 +277,37 @@ class PomNextTokenValidator(NextTokenValidator):
 
     def output_str(self, n_candidates, token_len, n_correct, n_incorrect):
         return f'{self.project},pom,{n_candidates},{token_len},{n_correct},{n_incorrect}'
+
+
+class TokenizeValidator(NLPValidator, metaclass=ABCMeta):
+    def __init__(self, project, conf):
+        super().__init__(project, conf, 3, self.listfile)
+        self.prefix = conf.get_prefix()
+        self.tokenprefix = conf.get_tokenprefix()
+
+    def validate(self, executor):
+        futures_list = list()
+        mylist = self.listfile
+
+        fhandle = open(mylist, 'r')
+        lines = fhandle.readlines()
+        fhandle.close()
+        for file in lines:
+            fname = file.strip()
+            t = self.tokenizer(fname, self.prefix, self.tokenprefix, self.versions, self.paths)
+            f = executor.submit(t.sentence_tokenize)
+            futures_list.append(f)
+
+        return futures_list
+
+class PomTokenizeValidator(TokenizeValidator):
+    def __init__(self, project, conf):
+        self.tokenizer = PomTokenizer
+        self.listfile = conf.get_pomlist(project)
+        super().__init__(project, conf)
+
+class JavaTokenizeValidator(TokenizeValidator):
+    def __init__(self, project, conf):
+        self.tokenizer = JavaTokenizer
+        self.listfile = conf.get_srclist(project)
+        super().__init__(project, conf)

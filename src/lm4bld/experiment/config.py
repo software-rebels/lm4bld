@@ -20,6 +20,8 @@ MIN_CANDIDATES = 'min_candidates'
 MAX_CANDIDATES = 'max_candidates'
 POMLISTDIR = 'pomlistdir'
 SRCLISTDIR = 'srclistdir'
+PREFIX = 'prefix'
+TOKENPREFIX = 'tokenprefix'
 
 class Config:
     def __init__(self, conf_file="lm4bld.yml"):
@@ -67,6 +69,12 @@ class Config:
 
     def get_max_candidates(self):
         return self.confdata[MAX_CANDIDATES]
+
+    def get_prefix(self):
+        return self.confdata[PREFIX]
+
+    def get_tokenprefix(self):
+        return self.confdata[TOKENPREFIX]
 
     def get_pomlist(self, projname):
         return f'{self.confdata[POMLISTDIR]}{os.path.sep}{projname}.txt'

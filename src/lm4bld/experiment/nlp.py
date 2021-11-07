@@ -5,6 +5,8 @@ from lm4bld.experiment.validation import PomCrossProjectValidator
 from lm4bld.experiment.validation import JavaCrossProjectValidator
 from lm4bld.experiment.validation import JavaNextTokenValidator
 from lm4bld.experiment.validation import PomNextTokenValidator
+from lm4bld.experiment.validation import JavaTokenizeValidator
+from lm4bld.experiment.validation import PomTokenizeValidator
 from lm4bld.experiment.api import Experiment
 from lm4bld.nlp.tokenize import PomTokenizer
 
@@ -40,3 +42,10 @@ class NextTokenExperiment(Experiment):
 
     def getPomValidator(self):
         return PomNextTokenValidator(self.project, self.conf)
+
+class TokenizeExperiment(Experiment):
+    def getSrcValidator(self):
+        return JavaTokenizeValidator(self.project, self.conf)
+
+    def getPomValidator(self):
+        return PomTokenizeValidator(self.project, self.conf)

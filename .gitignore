@@ -130,6 +130,7 @@ dmypy.json
 
 # Ignore my garbage
 pomlists/
+javalists/
 .RData
 .Rhistory
 *.swp

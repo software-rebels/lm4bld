@@ -5,7 +5,7 @@ from abc import ABCMeta, abstractmethod
 
 class AbstractTokenizer(metaclass=ABCMeta):
     def __init__(self, filename, versions, paths):
-        self.fhandle = open(filename, 'r')
+        self.fhandle = open(filename, 'r', encoding="ISO-8859-1")
         self.versions = versions 
         self.paths = paths
 
@@ -52,7 +52,9 @@ class AbstractTokenizer(metaclass=ABCMeta):
         sent = list()
         for tok in toks:
             if tok == "\n":
-                sents.append(sent)
+                if sent:
+                    sents.append(sent)
+
                 sent = list()
             else:
                 sent.append(self.normalize(tok))
@@ -72,7 +74,7 @@ class PomTokenizer(AbstractTokenizer):
 
 class JavaTokenizer(AbstractTokenizer):
     def comment_re(self):
-        return re.compile(r"\/\*.*?\*\/|\/\/.*?")
+        return re.compile(r"\/\*[\s\S]*?\*\/|\/\/[\s\S]*?")
 
     def tokenizer(self):
         return RegexpTokenizer('[\"\']|\n|\=|\.|\,|\:|\;|\-|\(|\)|\{|\}|\[|\]|\!|\@|\#|\$|\%|\^|\&|\*|\+|\~|\/|\<|\>|\w+')

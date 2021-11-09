@@ -6,7 +6,8 @@ from nltk.tokenize import RegexpTokenizer
 from abc import ABCMeta, abstractmethod
 
 class AbstractTokenizer(metaclass=ABCMeta):
-    def __init__(self, filename, prefix, tokenprefix, versions, paths):
+    def __init__(self, filename, prefix, tokenprefix, versions=None,
+                 paths=None):
         self.filename = filename
         self.prefix = prefix
         self.tokenprefix = tokenprefix
@@ -84,7 +85,7 @@ class AbstractTokenizer(metaclass=ABCMeta):
     def load_tokens(self):
         tokenfile = self.get_token_file()
         token_handle = open(tokenfile, 'r', encoding="ISO-8859-1")
-        tokens = json.load(tokenfile)
+        tokens = json.load(token_handle)
         token_handle.close()
 
         return tokens

@@ -11,7 +11,8 @@ maxorder: 5 # The maximum number of grams to explore
 # RQ2 config
 ################################################################################
 
-crossproj_order: 3 # Specified in Hindle et al.
+crossproj_order: 1 # Specified in Hindle et al.
+modelprefix: models
 
 ################################################################################
 # RQ4 config
@@ -35,9 +36,9 @@ tokenprefix: ../data/tokens
 # Global config
 ################################################################################
 
-task: TokenizeExperiment # Valid settings: CrossFoldExperiment, CrossProjectExperiment, NextTokenExperiment, TokenizeExperiment
+task: CrossProjectTestModelsExperiment # Valid settings: CrossFoldExperiment, CrossProjectExperiment, NextTokenExperiment, TokenizeExperiment
 
-maxjobs: 28 # Size of the process pool to execute tasks in parallel
+maxjobs: 4 # Size of the process pool to execute tasks in parallel
 
 pomlistdir: pomlists
 srclistdir: javalists

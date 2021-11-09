@@ -1,8 +1,11 @@
 from abc import ABCMeta, abstractmethod
+import concurrent.futures
 from lm4bld.experiment.validation import PomCrossFoldValidator
 from lm4bld.experiment.validation import JavaCrossFoldValidator
-from lm4bld.experiment.validation import PomCrossProjectValidator
-from lm4bld.experiment.validation import JavaCrossProjectValidator
+from lm4bld.experiment.validation import PomCrossProjectTrainModelsValidator
+from lm4bld.experiment.validation import JavaCrossProjectTrainModelsValidator
+from lm4bld.experiment.validation import PomCrossProjectTestModelsValidator
+from lm4bld.experiment.validation import JavaCrossProjectTestModelsValidator
 from lm4bld.experiment.validation import JavaNextTokenValidator
 from lm4bld.experiment.validation import PomNextTokenValidator
 from lm4bld.experiment.validation import JavaTokenizeValidator
@@ -29,13 +32,20 @@ class CrossFoldExperiment(Experiment):
 
         return futures_list
 
-class CrossProjectExperiment(Experiment):
+class CrossProjectTrainModelsExperiment(Experiment):
     def getSrcValidator(self):
-        return JavaCrossProjectValidator(self.project, self.conf)
+        return JavaCrossProjectTrainModelsValidator(self.project, self.conf)
 
     def getPomValidator(self):
-        return PomCrossProjectValidator(self.project, self.conf)
+        return PomCrossProjectTrainModelsValidator(self.project, self.conf)
         
+class CrossProjectTestModelsExperiment(Experiment):
+    def getSrcValidator(self):
+        return JavaCrossProjectTestModelsValidator(self.project, self.conf)
+
+    def getPomValidator(self):
+        return PomCrossProjectTestModelsValidator(self.project, self.conf)
+
 class NextTokenExperiment(Experiment):
     def getSrcValidator(self):
         return JavaNextTokenValidator(self.project, self.conf)

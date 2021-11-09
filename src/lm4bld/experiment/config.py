@@ -22,11 +22,13 @@ POMLISTDIR = 'pomlistdir'
 SRCLISTDIR = 'srclistdir'
 PREFIX = 'prefix'
 TOKENPREFIX = 'tokenprefix'
+MODELPREFIX = 'modelprefix'
 
 class Config:
     def __init__(self, conf_file="lm4bld.yml"):
         fhandle = open(conf_file, 'r')
         self.confdata = yaml.load(fhandle, Loader=yaml.FullLoader)
+        fhandle.close()
 
     def get_task(self):
         return self.confdata[TASK]
@@ -75,6 +77,9 @@ class Config:
 
     def get_tokenprefix(self):
         return self.confdata[TOKENPREFIX]
+
+    def get_modelprefix(self):
+        return self.confdata[MODELPREFIX]
 
     def get_pomlist(self, projname):
         return f'{self.confdata[POMLISTDIR]}{os.path.sep}{projname}.txt'

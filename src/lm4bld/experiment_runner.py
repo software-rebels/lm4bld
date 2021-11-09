@@ -4,7 +4,7 @@ import os
 import sys
 
 from lm4bld.experiment.nlp import CrossFoldExperiment
-from lm4bld.experiment.nlp import CrossProjectExperiment
+from lm4bld.experiment.nlp import CrossProjectTrainModelsExperiment
 from lm4bld.experiment.nlp import NextTokenExperiment
 from lm4bld.experiment.nlp import TokenizeExperiment
 

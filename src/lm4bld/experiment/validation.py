@@ -1,5 +1,6 @@
 #import itertools
 from abc import ABCMeta, abstractmethod
+import pickle
 import os
 import random
 
@@ -11,21 +12,36 @@ from lm4bld.nlp.tokenize import JavaTokenizer
 from lm4bld.nlp.tokenize import PomTokenizer
 
 class NLPValidator(metaclass=ABCMeta):
-    def __init__(self, project, conf, order, listfile):
+    def __init__(self, project, conf, order, listfile, tokenizer):
         self.project = project
         self.order = order 
+        self.listfile = listfile
         self.versions = conf.get_versions()
         self.paths = conf.get_paths()
+        self.tokenizer = tokenizer
+        self.prefix = conf.get_prefix()
+        self.tokenprefix = conf.get_tokenprefix()
+        self.modelprefix = conf.get_modelprefix()
 
-        self.listfiles = list()
-        self.allSents = list()
-
-        # TODO: Was looped when reading through listfile
-        # self.listfiles.append(fname)
         random.seed(666)
 
-    def getSents(self):
-        return self.allSents
+    def load_filenames(self):
+        flist = list()
+        fhandle = open(self.listfile, 'r', encoding="ISO-8859-1")
+        for f in fhandle.readlines():
+            flist.append(f.strip())
+
+        fhandle.close()
+        return flist
+
+    def load_sents(self):
+        sents = list()
+
+        for f in self.load_filenames():
+            t = self.tokenizer(f, self.prefix, self.tokenprefix)
+            sents += t.load_tokens()
+        
+        return sents
 
     def getProject(self):
         return self.project
@@ -65,7 +81,7 @@ class CrossFoldValidator(NLPValidator, metaclass=ABCMeta):
         for fold in range(self.nfolds):
             foldSents.append(list())
 
-        myList = self.allSents
+        myList = self.load_sents()
         random.shuffle(myList)
 
         cntr = 0
@@ -123,11 +139,49 @@ class JavaCrossFoldValidator(CrossFoldValidator):
         entline = f'{proj},java,entropy,{entropy},{order},{fold},{iteration}'
         return f'{unkline}{os.linesep}{entline}'
 
-class CrossProjectValidator(NLPValidator, metaclass=ABCMeta):
+class CrossProjectTrainModelsValidator(NLPValidator, metaclass=ABCMeta):
     def __init__(self, project, conf, listfile, tokenizer):
         super().__init__(project, conf, conf.get_crossproj_order(), listfile,
                          tokenizer)
-        self.my_fit = None
+
+    def validate(self, executor):
+        futures_list = list()
+        futures_list.append(executor.submit(self.trainAndSaveModel))
+        return futures_list
+
+    @abstractmethod
+    def get_model_fname(self):
+        raise NotImplementedError()
+
+    def trainAndSaveModel(self):
+        model_fname = self.get_model_fname()
+        my_fit = self.trainModel(self.load_sents())
+
+        fhandle = open(model_fname, 'wb')
+        pickle.dump(my_fit, fhandle)
+        fhandle.close()
+
+        return model_fname
+
+class JavaCrossProjectTrainModelsValidator(CrossProjectTrainModelsValidator):
+    def __init__(self, project, conf):
+        super().__init__(project, conf, conf.get_srclist(project),
+                         JavaTokenizer)
+
+    def get_model_fname(self):
+        return f"{self.modelprefix}{os.path.sep}{self.project}-java.pkl"
+
+class PomCrossProjectTrainModelsValidator(CrossProjectTrainModelsValidator):
+    def __init__(self, project, conf):
+        super().__init__(project, conf, conf.get_pomlist(project), PomTokenizer)
+
+    def get_model_fname(self):
+        return f"{self.modelprefix}{os.path.sep}{self.project}-pom.pkl"
+
+class CrossProjectTestModelsValidator(NLPValidator, metaclass=ABCMeta):
+    def __init__(self, project, conf, listfile, tokenizer):
+        super().__init__(project, conf, conf.get_crossproj_order(), listfile,
+                         tokenizer)
         self.projects = conf.get_projects()
 
     @abstractmethod
@@ -138,14 +192,20 @@ class CrossProjectValidator(NLPValidator, metaclass=ABCMeta):
     def get_validator(self, projname):
         raise NotImplementedError()
 
+    def loadModel(self):
+        model_fname = self.get_model_fname()
+        fhandle = open(model_fname, "rb")
+        my_fit = pickle.load(fhandle)
+        fhandle.close()
+
+        return my_fit
+
     def crossProjectJob(self, otherProj):
         testValidator = self.get_validator(otherProj)
-        testCorpus = testValidator.getSents()
+        testCorpus = testValidator.load_sents()
 
-        if self.my_fit is None:
-            self.my_fit = self.trainModel(self.allSents)
-
-        unk_rate, entropy = self.testModel(self.my_fit, testCorpus)
+        my_fit = self.loadModel()
+        unk_rate, entropy = self.testModel(my_fit, testCorpus)
 
         return self.output_str(self.project, otherProj, unk_rate, entropy)
 
@@ -156,12 +216,13 @@ class CrossProjectValidator(NLPValidator, metaclass=ABCMeta):
             if (testProjName == self.project):
                 continue
 
-            f = executor.submit(self.crossProjectJob, testProjName)
-            futures_list.append(f)
+            #f = executor.submit(self.crossProjectJob, testProjName)
+            #futures_list.append(f)
+            print(self.crossProjectJob(testProjName))
 
         return futures_list
 
-class PomCrossProjectValidator(CrossProjectValidator):
+class PomCrossProjectTestModelsValidator(CrossProjectTestModelsValidator):
     def __init__(self, project, conf):
         super().__init__(project, conf, conf.get_pomlist(project), PomTokenizer)
         self.conf = conf
@@ -170,9 +231,12 @@ class PomCrossProjectValidator(CrossProjectValidator):
         return f'{train_proj},{test_proj},pom,{unk_rate},{entropy}'
 
     def get_validator(self, projname):
-        return PomCrossProjectValidator(projname, self.conf)
+        return PomCrossProjectTestModelsValidator(projname, self.conf)
 
-class JavaCrossProjectValidator(CrossProjectValidator):
+    def get_model_fname(self):
+        return f"{self.modelprefix}{os.path.sep}{self.project}-pom.pkl"
+
+class JavaCrossProjectTestModelsValidator(CrossProjectTestModelsValidator):
     def __init__(self, project, conf):
         super().__init__(project, conf, conf.get_srclist(project),
                          JavaTokenizer)
@@ -182,7 +246,10 @@ class JavaCrossProjectValidator(CrossProjectValidator):
         return f'{train_proj},{test_proj},java,{unk_rate},{entropy}'
 
     def get_validator(self, projname):
-        return JavaCrossProjectValidator(projname, self.conf)
+        return JavaCrossProjectTestModelsValidator(projname, self.conf)
+
+    def get_model_fname(self):
+        return f"{self.modelprefix}{os.path.sep}{self.project}-java.pkl"
 
 class NextTokenValidator(NLPValidator, metaclass=ABCMeta):
     def __init__(self, project, conf, listfile, tokenizer):
@@ -193,7 +260,7 @@ class NextTokenValidator(NLPValidator, metaclass=ABCMeta):
         self.maxCandidates = conf.get_max_candidates()
 
     def nextTokenCorpusSplit(self):
-        myList = self.listfiles
+        myList = self.load_filenames()
         random.shuffle(myList)
 
         # Testing corpus
@@ -280,8 +347,8 @@ class PomNextTokenValidator(NextTokenValidator):
 
 
 class TokenizeValidator(NLPValidator, metaclass=ABCMeta):
-    def __init__(self, project, conf):
-        super().__init__(project, conf, 3, self.listfile)
+    def __init__(self, project, conf, listfile, tokenizer):
+        super().__init__(project, conf, 3, listfile, tokenizer)
         self.prefix = conf.get_prefix()
         self.tokenprefix = conf.get_tokenprefix()
 
@@ -302,12 +369,8 @@ class TokenizeValidator(NLPValidator, metaclass=ABCMeta):
 
 class PomTokenizeValidator(TokenizeValidator):
     def __init__(self, project, conf):
-        self.tokenizer = PomTokenizer
-        self.listfile = conf.get_pomlist(project)
-        super().__init__(project, conf)
+        super().__init__(project, conf, conf.get_pomlist(project), PomTokenizer)
 
 class JavaTokenizeValidator(TokenizeValidator):
     def __init__(self, project, conf):
-        self.tokenizer = JavaTokenizer
-        self.listfile = conf.get_srclist(project)
-        super().__init__(project, conf)
+        super().__init__(project, conf, conf.get_srclist(project), JavaTokenizer)

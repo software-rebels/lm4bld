@@ -216,9 +216,9 @@ class CrossProjectTestModelsValidator(NLPValidator, metaclass=ABCMeta):
             if (testProjName == self.project):
                 continue
 
-            #f = executor.submit(self.crossProjectJob, testProjName)
-            #futures_list.append(f)
-            print(self.crossProjectJob(testProjName))
+            f = executor.submit(self.crossProjectJob, testProjName)
+            futures_list.append(f)
+            #print(self.crossProjectJob(testProjName))
 
         return futures_list
 

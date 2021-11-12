@@ -23,8 +23,6 @@ class NLPValidator(metaclass=ABCMeta):
         self.tokenprefix = conf.get_tokenprefix()
         self.modelprefix = conf.get_modelprefix()
 
-        random.seed(666)
-
     def load_filenames(self):
         flist = list()
         fhandle = open(self.listfile, 'r', encoding="ISO-8859-1")
@@ -70,6 +68,8 @@ class CrossFoldValidator(NLPValidator, metaclass=ABCMeta):
         super().__init__(project, conf, order, listfile, tokenizer)
         self.nfolds = conf.get_nfolds()
         self.niter = conf.get_niter()
+        self.minorder = conf.get_minorder()
+        self.maxorder = conf.get_maxorder()
 
     @abstractmethod
     def output_str(self, proj, unk_rate, entropy, order, fold, iteration):
@@ -82,6 +82,7 @@ class CrossFoldValidator(NLPValidator, metaclass=ABCMeta):
             foldSents.append(list())
 
         myList = self.load_sents()
+        random.seed(666) # I'm paranoid...
         random.shuffle(myList)
 
         cntr = 0
@@ -91,31 +92,30 @@ class CrossFoldValidator(NLPValidator, metaclass=ABCMeta):
 
         return foldSents
 
-    def nFoldJob(self, trainCorpus, testCorpus, fold, iteration):
+    def nFoldJob(self, order, fold, iteration):
+        self.order = order
+        myFolds = self.getFolds()
+
+        testCorpus = myFolds[fold]
+        trainCorpus = list()
+        for trainIdx in range(self.nfolds):
+            if trainIdx != fold:
+                trainCorpus += myFolds[trainIdx]
+
         fitter = self.trainModel(trainCorpus)
         unk_rate, entropy = self.testModel(fitter, testCorpus)
 
-        p = self.project
-        o = self.order
-        return self.output_str(p, unk_rate, entropy, o, fold, iteration)
+        return self.output_str(self.project, unk_rate, entropy, order, fold,
+                               iteration)
 
     def validate(self, executor):
         my_futures = list()
 
-        for iteration in range(self.niter):
-            myFolds = self.getFolds()
-
-            for fold in range(self.nfolds):
-                testCorpus = myFolds[fold]
-
-                trainCorpus = list()
-                for trainIdx in range(self.nfolds):
-                    if trainIdx != fold:
-                        trainCorpus += myFolds[trainIdx]
-                
-                f = executor.submit(self.nFoldJob, trainCorpus, testCorpus,
-                                    fold, iteration)
-                my_futures.append(f)
+        for order in range(self.minorder, (self.maxorder+1)):
+            for iteration in range(self.niter):
+                for fold in range(self.nfolds):
+                    f = executor.submit(self.nFoldJob, order, fold, iteration)
+                    my_futures.append(f)
 
         return my_futures
 
@@ -261,6 +261,7 @@ class NextTokenValidator(NLPValidator, metaclass=ABCMeta):
 
     def nextTokenCorpusSplit(self):
         myList = self.load_filenames()
+        random.seed(666)
         random.shuffle(myList)
 
         # Testing corpus

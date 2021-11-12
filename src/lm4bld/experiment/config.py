@@ -10,6 +10,7 @@ MINORDER = 'minorder'
 MAXORDER = 'maxorder'
 PROJECTS = 'projects'
 MAXJOBS = 'maxjobs'
+MAXTHREADS = 'maxthreads'
 CROSSPROJ_ORDER = 'crossproj_order'
 TASK = 'task'
 VERSIONS = 'normalize_version_strings'
@@ -35,6 +36,9 @@ class Config:
 
     def get_maxjobs(self):
         return self.confdata[MAXJOBS]
+
+    def get_maxthreads(self):
+        return self.confdata[MAXTHREADS]
 
     def get_projects(self):
         return self.confdata[PROJECTS]

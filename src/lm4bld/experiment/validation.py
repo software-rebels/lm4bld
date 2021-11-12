@@ -1,5 +1,6 @@
 #import itertools
 from abc import ABCMeta, abstractmethod
+import concurrent.futures
 import pickle
 import os
 import random
@@ -70,6 +71,7 @@ class CrossFoldValidator(NLPValidator, metaclass=ABCMeta):
         self.niter = conf.get_niter()
         self.minorder = conf.get_minorder()
         self.maxorder = conf.get_maxorder()
+        self.maxthreads = conf.get_maxthreads()
 
     @abstractmethod
     def output_str(self, proj, unk_rate, entropy, order, fold, iteration):
@@ -92,30 +94,48 @@ class CrossFoldValidator(NLPValidator, metaclass=ABCMeta):
 
         return foldSents
 
-    def nFoldJob(self, order, fold, iteration):
-        self.order = order
-        myFolds = self.getFolds()
-
-        testCorpus = myFolds[fold]
+    def nFoldThread(self, fold, iteration):
+        testCorpus = self.myFolds[fold]
         trainCorpus = list()
         for trainIdx in range(self.nfolds):
             if trainIdx != fold:
-                trainCorpus += myFolds[trainIdx]
+                trainCorpus += self.myFolds[trainIdx]
 
         fitter = self.trainModel(trainCorpus)
         unk_rate, entropy = self.testModel(fitter, testCorpus)
 
-        return self.output_str(self.project, unk_rate, entropy, order, fold,
-                               iteration)
+        return self.output_str(self.project, unk_rate, entropy, self.order,
+                               fold, iteration)
+
+
+    def nFoldProcess(self, order, iteration):
+        self.order = order
+        self.myFolds = self.getFolds()
+        executor = concurrent.futures.ThreadPoolExecutor(max_workers=
+                                                         self.maxthreads)
+
+        my_futures = list()
+        for fold in range(self.nfolds):
+            my_futures.append(executor.submit(self.nFoldThread, fold,
+                                              iteration))
+
+        rtnstr = ""
+        for future in concurrent.futures.as_completed(my_futures):
+            if rtnstr:
+                rtnstr += os.linesep
+            rtnstr += future.result()
+
+        executor.shutdown()
+
+        return rtnstr
 
     def validate(self, executor):
         my_futures = list()
 
         for order in range(self.minorder, (self.maxorder+1)):
             for iteration in range(self.niter):
-                for fold in range(self.nfolds):
-                    f = executor.submit(self.nFoldJob, order, fold, iteration)
-                    my_futures.append(f)
+                f = executor.submit(self.nFoldProcess, order, iteration)
+                my_futures.append(f)
 
         return my_futures
 

@@ -23,6 +23,7 @@ SRCLISTDIR = 'srclistdir'
 PREFIX = 'prefix'
 TOKENPREFIX = 'tokenprefix'
 MODELPREFIX = 'modelprefix'
+TESTRATIOTHRESHOLD = 'test_ratio_threshold'
 
 class Config:
     def __init__(self, conf_file="lm4bld.yml"):
@@ -80,6 +81,9 @@ class Config:
 
     def get_modelprefix(self):
         return self.confdata[MODELPREFIX]
+
+    def get_testratiothreshold(self):
+        return self.confdata[TESTRATIOTHRESHOLD]
 
     def get_pomlist(self, projname):
         return f'{self.confdata[POMLISTDIR]}{os.path.sep}{projname}.txt'

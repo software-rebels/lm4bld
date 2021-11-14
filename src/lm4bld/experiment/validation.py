@@ -34,10 +34,13 @@ class NLPValidator(metaclass=ABCMeta):
         fhandle.close()
         return flist
 
-    def load_sents(self):
+    def load_sents(self, flist=None):
         sents = list()
 
-        for f in self.load_filenames():
+        if flist is None:
+            flist = self.load_filenames()
+
+        for f in flist:
             t = self.tokenizer(f, self.prefix, self.tokenprefix)
             sents += t.load_tokens()
         
@@ -259,22 +262,18 @@ class NextTokenValidator(NLPValidator, metaclass=ABCMeta):
                          tokenizer)
         self.testSize = conf.get_next_token_test_size()
         self.minCandidates = conf.get_min_candidates()
-        self.maxCandidates = conf.get_max_candidates()
+        self.maxCandidates = conf.get_max_candidates() +1
+        self.testRatioThreshold = conf.get_testratiothreshold()
 
     def nextTokenCorpusSplit(self):
         myList = self.load_filenames()
+        if self.testSize/len(myList) > self.testRatioThreshold:
+            return None, None
+
         random.shuffle(myList)
 
-        # Testing corpus
-        testCorpus = list()
-        for pomfile in myList[0:self.testSize]:
-            t = self.tokenizer(pomfile, self.versions, self.paths)
-            testCorpus += t.sentence_tokenize()
-
-        trainCorpus = list()
-        for pomfile in myList[self.testSize:len(myList)]:
-            t = self.tokenizer(pomfile, self.versions, self.paths)
-            trainCorpus += t.sentence_tokenize()
+        testCorpus = self.load_sents(myList[0:self.testSize])
+        trainCorpus = self.load_sents(myList[self.testSize:len(myList)])
 
         return trainCorpus, testCorpus
 
@@ -324,11 +323,13 @@ class NextTokenValidator(NLPValidator, metaclass=ABCMeta):
     def validate(self, executor):
         futures_list = list()
         trainCorpus, testCorpus = self.nextTokenCorpusSplit()
-        
-        fitter = self.trainModel(trainCorpus, self.order)
-        for nCandidates in range(self.minCandidates, (self.maxCandidates+1)):
-            f = executor.submit(self.guessNextTokenEvaluator, fitter, testCorpus, nCandidates)
-            futures_list.append(f)
+
+        if trainCorpus is not None and testCorpus is not None:
+            fitter = self.trainModel(trainCorpus, self.order)
+            for nCandidates in range(self.minCandidates, self.maxCandidates):
+                f = executor.submit(self.guessNextTokenEvaluator, fitter,
+                                    testCorpus, nCandidates)
+                futures_list.append(f)
 
         return futures_list
 

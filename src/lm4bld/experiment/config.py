@@ -24,6 +24,8 @@ PREFIX = 'prefix'
 TOKENPREFIX = 'tokenprefix'
 MODELPREFIX = 'modelprefix'
 TESTRATIOTHRESHOLD = 'test_ratio_threshold'
+PROCESS_POMS = 'process_poms'
+PROCESS_SOURCE = 'process_source'
 
 class Config:
     def __init__(self, conf_file="lm4bld.yml"):
@@ -84,6 +86,12 @@ class Config:
 
     def get_testratiothreshold(self):
         return self.confdata[TESTRATIOTHRESHOLD]
+
+    def get_process_source(self):
+        return self.confdata[PROCESS_SOURCE]
+
+    def get_process_poms(self):
+        return self.confdata[PROCESS_POMS]
 
     def get_pomlist(self, projname):
         return f'{self.confdata[POMLISTDIR]}{os.path.sep}{projname}.txt'

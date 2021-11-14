@@ -19,9 +19,10 @@ modelprefix: models
 ################################################################################
 
 next_token_order: 3 # Specified in Hindle et al.
-next_token_test_size: 10
+next_token_test_size: 40
 min_candidates: 2
 max_candidates: 10
+test_ratio_threshold: 0.5
 
 ################################################################################
 # Tokenizer config
@@ -36,7 +37,10 @@ tokenprefix: ../data/tokens
 # Global config
 ################################################################################
 
-task: CrossProjectTestModelsExperiment # Valid settings: CrossFoldExperiment, CrossProjectExperiment, NextTokenExperiment, TokenizeExperiment
+task: NextTokenExperiment # Valid settings: CrossFoldExperiment, CrossProjectExperiment, NextTokenExperiment, TokenizeExperiment
+
+process_source: false
+process_poms: true
 
 maxjobs: 4 # Size of the process pool to execute tasks in parallel
 

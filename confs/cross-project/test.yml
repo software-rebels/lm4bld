@@ -1,0 +1,165 @@
+################################################################################
+# RQ2 config
+################################################################################
+
+crossproj_order: 3 # Specified in Hindle et al.
+modelprefix: models
+
+################################################################################
+# Tokenizer config
+################################################################################
+
+prefix: ../data/sources
+tokenprefix: ../data/tokens
+
+################################################################################
+# Global config
+################################################################################
+
+task: CrossProjectTestModelsExperiment
+
+process_source: true
+process_poms: true
+
+maxjobs: 4 # Size of the process pool to execute tasks in parallel
+
+pomlistdir: pomlists
+srclistdir: javalists
+
+projects:
+- accumulo
+- activemq
+- airavata
+- ambari
+- ant
+- any23
+- archiva
+- aries
+- arrow
+- asterixdb
+- atlas
+- avro
+- axis
+- bahir
+- beam
+- bigtop
+- bookkeeper
+- brooklyn
+- bval
+- camel
+- carbondata
+- cayenne
+- chemistry
+- clerezza
+- cloudstack
+- commons
+- creadur
+- ctakes
+- curator
+- cxf
+- datasketches
+- db
+- deltaspike
+- directory
+- dolphinscheduler
+- drill
+- druid
+- dubbo
+- empire
+- felix
+- flink
+- flume
+- fluo
+- geronimo
+- giraph
+- gora
+- griffin
+- guacamole
+- hadoop
+- hawq
+- hbase
+- helix
+- hive
+- httpcomponents
+- hudi
+- ignite
+- impala
+- iotdb
+- isis
+- jackrabbit
+- james
+- jclouds
+- jena
+- johnzon
+- jspwiki
+- juddi
+- juneau
+- karaf
+- knox
+- kylin
+- logging
+- mahout
+- manifoldcf
+- maven
+- mina
+- mnemonic
+- myfaces
+- nifi
+- olingo
+- oodt
+- oozie
+- openjpa
+- openmeetings
+- opennlp
+- openwebbeans
+- orc
+- ozone
+- parquet
+- pdfbox
+- phoenix
+- pinot
+- pivot
+- plc4x
+- portals
+- pulsar
+- qpid
+- ranger
+- ratis
+- reef
+- river
+- rocketmq
+- roller
+- royale
+- rya
+- sanctuario
+- servicecomb
+- servicemix
+- shardingsphere
+- shiro
+- singa
+- sis
+- skywalking
+- spark
+- storm
+- streams
+- struts
+- submarine
+- synapse
+- syncope
+- systemds
+- tez
+- tika
+- tinkerpop
+- tomee
+- trafficcontrol
+- turbine
+- uima
+- unomi
+- usergrid
+- velocity
+- webservices
+- wicket
+- xmlgraphics
+- yetus
+- zeppelin
+- zookeeper

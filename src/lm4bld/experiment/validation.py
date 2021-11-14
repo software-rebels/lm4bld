@@ -46,18 +46,18 @@ class NLPValidator(metaclass=ABCMeta):
     def getProject(self):
         return self.project
 
-    def trainModel(self, trainCorpus):
-        fitter = NGramModel(self.order)
+    def trainModel(self, trainCorpus, order):
+        fitter = NGramModel(order)
         fitter.fit(trainCorpus)
 
         return fitter
 
-    def testModel(self, fitter, sents):
+    def testModel(self, fitter, sents, order):
         ngrams = list()
 
         for sent in sents:
-            paddedTokens = list(pad_both_ends(sent, n=self.order))
-            ngrams += list(everygrams(paddedTokens, max_len=self.order))
+            paddedTokens = list(pad_both_ends(sent, n=order))
+            ngrams += list(everygrams(paddedTokens, max_len=order))
 
         return fitter.unkRate(ngrams), fitter.crossEntropy(ngrams)
 
@@ -70,6 +70,8 @@ class CrossFoldValidator(NLPValidator, metaclass=ABCMeta):
         super().__init__(project, conf, order, listfile, tokenizer)
         self.nfolds = conf.get_nfolds()
         self.niter = conf.get_niter()
+        self.minorder = conf.get_minorder()
+        self.maxorder = conf.get_maxorder()+1
 
     @abstractmethod
     def output_str(self, proj, unk_rate, entropy, order, fold, iteration):
@@ -91,31 +93,31 @@ class CrossFoldValidator(NLPValidator, metaclass=ABCMeta):
 
         return foldSents
 
-    def nFoldJob(self, trainCorpus, testCorpus, fold, iteration):
-        fitter = self.trainModel(trainCorpus)
-        unk_rate, entropy = self.testModel(fitter, testCorpus)
+    def nFoldJob(self, trainCorpus, testCorpus, order, fold, iteration):
+        fitter = self.trainModel(trainCorpus, order)
+        unk_rate, entropy = self.testModel(fitter, testCorpus, order)
 
-        p = self.project
-        o = self.order
-        return self.output_str(p, unk_rate, entropy, o, fold, iteration)
+        return self.output_str(self.project, unk_rate, entropy, order, fold,
+                               iteration)
 
     def validate(self, executor):
         my_futures = list()
 
-        for iteration in range(self.niter):
-            myFolds = self.getFolds()
+        for order in range(self.minorder, self.maxorder):
+            for iteration in range(self.niter):
+                myFolds = self.getFolds()
 
-            for fold in range(self.nfolds):
-                testCorpus = myFolds[fold]
+                for fold in range(self.nfolds):
+                    testCorpus = myFolds[fold]
 
-                trainCorpus = list()
-                for trainIdx in range(self.nfolds):
-                    if trainIdx != fold:
-                        trainCorpus += myFolds[trainIdx]
+                    trainCorpus = list()
+                    for trainIdx in range(self.nfolds):
+                        if trainIdx != fold:
+                            trainCorpus += myFolds[trainIdx]
                 
-                f = executor.submit(self.nFoldJob, trainCorpus, testCorpus,
-                                    fold, iteration)
-                my_futures.append(f)
+                    f = executor.submit(self.nFoldJob, trainCorpus, testCorpus,
+                                    order, fold, iteration)
+                    my_futures.append(f)
 
         return my_futures
 
@@ -155,7 +157,7 @@ class CrossProjectTrainModelsValidator(NLPValidator, metaclass=ABCMeta):
 
     def trainAndSaveModel(self):
         model_fname = self.get_model_fname()
-        my_fit = self.trainModel(self.load_sents())
+        my_fit = self.trainModel(self.load_sents(), self.order)
 
         fhandle = open(model_fname, 'wb')
         pickle.dump(my_fit, fhandle)
@@ -205,7 +207,7 @@ class CrossProjectTestModelsValidator(NLPValidator, metaclass=ABCMeta):
         testCorpus = testValidator.load_sents()
 
         my_fit = self.loadModel()
-        unk_rate, entropy = self.testModel(my_fit, testCorpus)
+        unk_rate, entropy = self.testModel(my_fit, testCorpus, self.order)
 
         return self.output_str(self.project, otherProj, unk_rate, entropy)
 
@@ -323,7 +325,7 @@ class NextTokenValidator(NLPValidator, metaclass=ABCMeta):
         futures_list = list()
         trainCorpus, testCorpus = self.nextTokenCorpusSplit()
         
-        fitter = self.trainModel(trainCorpus)
+        fitter = self.trainModel(trainCorpus, self.order)
         for nCandidates in range(self.minCandidates, (self.maxCandidates+1)):
             f = executor.submit(self.guessNextTokenEvaluator, fitter, testCorpus, nCandidates)
             futures_list.append(f)

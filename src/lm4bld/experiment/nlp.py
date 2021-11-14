@@ -15,22 +15,10 @@ from lm4bld.nlp.tokenize import PomTokenizer
 
 class CrossFoldExperiment(Experiment):
     def getPomValidator(self):
-        return PomCrossFoldValidator(self.project, self.conf, self.currorder)
+        return PomCrossFoldValidator(self.project, self.conf, None)
 
     def getSrcValidator(self):
-        return JavaCrossFoldValidator(self.project, self.conf, self.currorder)
-
-    def createFutures(self):
-        futures_list = list()
-        for order in range(self.conf.get_minorder(),
-                           (self.conf.get_maxorder()+1)):
-            self.currorder = order
-            pv = self.getPomValidator()
-            sv = self.getSrcValidator()
-            futures_list += pv.validate(self.executor)
-            futures_list += sv.validate(self.executor)
-
-        return futures_list
+        return JavaCrossFoldValidator(self.project, self.conf, None)
 
 class CrossProjectTrainModelsExperiment(Experiment):
     def getSrcValidator(self):

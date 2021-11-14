@@ -15,7 +15,10 @@ def lookup_class(mod_name, cname):
     return getattr(mod, cname)
 
 def main():
-    conf = config.Config()
+    # Kind of fragile, but...
+    cfile = sys.argv[1] if len(sys.argv) == 2 else None
+    conf = config.Config(cfile)
+
     maxjobs = conf.get_maxjobs() 
     exp_class = lookup_class("lm4bld.experiment.nlp", conf.get_task()) 
 

@@ -28,7 +28,10 @@ PROCESS_POMS = 'process_poms'
 PROCESS_SOURCE = 'process_source'
 
 class Config:
-    def __init__(self, conf_file="lm4bld.yml"):
+    def __init__(self, conf_file):
+        if conf_file is None:
+            conf_file = CONF_FILE
+
         fhandle = open(conf_file, 'r')
         self.confdata = yaml.load(fhandle, Loader=yaml.FullLoader)
         fhandle.close()

@@ -21,7 +21,6 @@ class NLPValidator(metaclass=ABCMeta):
         self.tokenizer = tokenizer
         self.prefix = conf.get_prefix()
         self.tokenprefix = conf.get_tokenprefix()
-        self.modelprefix = conf.get_modelprefix()
 
         random.seed(666)
 
@@ -148,6 +147,7 @@ class CrossProjectTrainModelsValidator(NLPValidator, metaclass=ABCMeta):
     def __init__(self, project, conf, listfile, tokenizer):
         super().__init__(project, conf, conf.get_crossproj_order(), listfile,
                          tokenizer)
+        self.modelprefix = conf.get_modelprefix()
 
     def validate(self, executor):
         futures_list = list()
@@ -188,6 +188,7 @@ class CrossProjectTestModelsValidator(NLPValidator, metaclass=ABCMeta):
         super().__init__(project, conf, conf.get_crossproj_order(), listfile,
                          tokenizer)
         self.projects = conf.get_projects()
+        self.modelprefix = conf.get_modelprefix()
 
     @abstractmethod
     def output_str(self, train_proj, test_proj, unk_rate, entropy):

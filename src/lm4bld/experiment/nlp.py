@@ -1,5 +1,3 @@
-from abc import ABCMeta, abstractmethod
-import concurrent.futures
 from lm4bld.experiment.validation import PomCrossFoldValidator
 from lm4bld.experiment.validation import JavaCrossFoldValidator
 from lm4bld.experiment.validation import PomCrossProjectTrainModelsValidator
@@ -11,7 +9,6 @@ from lm4bld.experiment.validation import PomNextTokenValidator
 from lm4bld.experiment.validation import JavaTokenizeValidator
 from lm4bld.experiment.validation import PomTokenizeValidator
 from lm4bld.experiment.api import Experiment
-from lm4bld.nlp.tokenize import PomTokenizer
 
 class CrossFoldExperiment(Experiment):
     def getPomValidator(self):

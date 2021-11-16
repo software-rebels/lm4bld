@@ -16,8 +16,6 @@ class NLPValidator(metaclass=ABCMeta):
         self.project = project
         self.order = order 
         self.listfile = listfile
-        self.versions = conf.get_versions()
-        self.paths = conf.get_paths()
         self.tokenizer = tokenizer
         self.prefix = conf.get_prefix()
         self.tokenprefix = conf.get_tokenprefix()
@@ -353,8 +351,8 @@ class PomNextTokenValidator(NextTokenValidator):
 class TokenizeValidator(NLPValidator, metaclass=ABCMeta):
     def __init__(self, project, conf, listfile, tokenizer):
         super().__init__(project, conf, 3, listfile, tokenizer)
-        self.prefix = conf.get_prefix()
-        self.tokenprefix = conf.get_tokenprefix()
+        self.versions = conf.get_versions()
+        self.paths = conf.get_paths()
 
     def validate(self, executor):
         futures_list = list()

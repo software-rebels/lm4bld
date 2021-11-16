@@ -5,7 +5,7 @@
 normalize_version_strings: false
 normalize_paths: false
 prefix: ../data/sources
-tokenprefix: ../data/tokens-no-vers-no-paths
+tokenprefix: ../data/tokens/no-vers-no-paths
 
 ################################################################################
 # Global config

@@ -18,7 +18,7 @@ class AbstractTokenizer(metaclass=ABCMeta):
         return re.compile(r"\d+(?:\.[v\d]+)+(?:[-\w]*)?")
 
     def path_re(self):
-        return re.compile(r"\w+(?:\/[\w\.\*\-]+)+")
+        return re.compile(r"\w+(?:\:\/\/)?(?:\/[\w\.\*\-]+)+(?:\:[0-9]+)?\/?")
 
     @abstractmethod
     def comment_re(self):
@@ -41,13 +41,13 @@ class AbstractTokenizer(metaclass=ABCMeta):
         comment_cleanup = self.comment_re()
         strdata = re.sub(comment_cleanup, "", strdata)
 
-        if (self.versions):
-            version_cleanup = self.version_re()
-            strdata =re.sub(version_cleanup, "<VERSNUM>", strdata)
-
         if (self.paths):
             path_cleanup = self.path_re()
-            strdata = re.sub(path_cleanup, "<PATHSTR>", strdata)
+            strdata = re.sub(path_cleanup, "__path_num__", strdata)
+
+        if (self.versions):
+            version_cleanup = self.version_re()
+            strdata =re.sub(version_cleanup, "__vers_num__", strdata)
 
         return strdata
 

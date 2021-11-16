@@ -1,8 +1,8 @@
-#import itertools
 from abc import ABCMeta, abstractmethod
 import pickle
 import os
 import random
+import tarfile
 
 from nltk.lm.preprocessing import pad_both_ends
 from nltk.util import everygrams
@@ -19,6 +19,7 @@ class NLPValidator(metaclass=ABCMeta):
         self.tokenizer = tokenizer
         self.prefix = conf.get_prefix()
         self.tokenprefix = conf.get_tokenprefix()
+        self.tarfile = conf.get_tarfile()
 
         random.seed(666)
 
@@ -37,10 +38,15 @@ class NLPValidator(metaclass=ABCMeta):
         if flist is None:
             flist = self.load_filenames()
 
+        tarhandle = tarfile.open(self.tarfile, 'r:') if self.tarfile else None
+
         for f in flist:
             t = self.tokenizer(f, self.prefix, self.tokenprefix)
-            sents += t.load_tokens()
-        
+            sents += t.load_tokens(tarhandle)
+
+        if tarhandle:
+            tarhandle.close()
+
         return sents
 
     def getProject(self):
@@ -363,7 +369,8 @@ class TokenizeValidator(NLPValidator, metaclass=ABCMeta):
         fhandle.close()
         for file in lines:
             fname = file.strip()
-            t = self.tokenizer(fname, self.prefix, self.tokenprefix, self.versions, self.paths)
+            t = self.tokenizer(fname, self.prefix, self.tokenprefix,
+                               self.versions, self.paths)
             f = executor.submit(t.sentence_tokenize)
             futures_list.append(f)
 

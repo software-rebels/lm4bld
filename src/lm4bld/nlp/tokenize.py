@@ -82,9 +82,9 @@ class AbstractTokenizer(metaclass=ABCMeta):
 
         return outfile
 
-    def load_tokens(self):
+    def load_tokens(self, tarhandle):
         tokenfile = self.get_token_file()
-        token_handle = open(tokenfile, 'r', encoding="ISO-8859-1")
+        token_handle = tarhandle.extractfile(tokenfile) if tarhandle else open(tokenfile, 'r', encoding="ISO-8859-1")
         tokens = json.load(token_handle)
         token_handle.close()
 

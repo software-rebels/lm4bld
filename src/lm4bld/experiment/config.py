@@ -26,6 +26,7 @@ MODELPREFIX = 'modelprefix'
 TESTRATIOTHRESHOLD = 'test_ratio_threshold'
 PROCESS_POMS = 'process_poms'
 PROCESS_SOURCE = 'process_source'
+TARFILE = 'tarfile'
 
 class Config:
     def __init__(self, conf_file):
@@ -95,6 +96,9 @@ class Config:
 
     def get_process_poms(self):
         return self.confdata[PROCESS_POMS]
+
+    def get_tarfile(self):
+        return self.confdata[TARFILE] if TARFILE in self.confdata else None
 
     def get_pomlist(self, projname):
         return f'{self.confdata[POMLISTDIR]}{os.path.sep}{projname}.txt'

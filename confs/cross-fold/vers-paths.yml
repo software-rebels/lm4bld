@@ -12,7 +12,7 @@ maxorder: 10 # The maximum number of grams to explore
 ################################################################################
 
 prefix: ../data/sources
-tokenprefix: ../data/tokens
+tokenprefix: ../data/tokens-vers-paths
 
 ################################################################################
 # Global config

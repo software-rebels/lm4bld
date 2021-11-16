@@ -5,7 +5,7 @@
 normalize_version_strings: false
 normalize_paths: false
 prefix: ../data/sources
-tokenprefix: ../data/tokens
+tokenprefix: ../data/tokens-no-vers-no-paths
 
 ################################################################################
 # Global config
@@ -16,7 +16,7 @@ task: TokenizeExperiment
 process_source: true
 process_poms: true
 
-maxjobs: 4 # Size of the process pool to execute tasks in parallel
+maxjobs: 28 # Size of the process pool to execute tasks in parallel
 
 pomlistdir: pomlists
 srclistdir: javalists

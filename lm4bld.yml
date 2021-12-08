@@ -28,18 +28,18 @@ test_ratio_threshold: 0.5
 # Tokenizer config
 ################################################################################
 
-normalize_version_strings: true
-normalize_paths: true
+normalize_version_strings: false
+normalize_paths: false
 prefix: ../data/sources
-tokenprefix: ../data/tokens
+tokenprefix: ../data/tokens/no-vers-no-paths
 
 ################################################################################
 # Global config
 ################################################################################
 
-task: NextTokenExperiment # Valid settings: CrossFoldExperiment, CrossProjectExperiment, NextTokenExperiment, TokenizeExperiment
+task: LocExperiment # Valid settings: CrossFoldExperiment, CrossProjectExperiment, NextTokenExperiment, TokenizeExperiment
 
-process_source: false
+process_source: true 
 process_poms: true
 
 maxjobs: 4 # Size of the process pool to execute tasks in parallel
@@ -73,6 +73,7 @@ projects:
 - chemistry
 - clerezza
 - cloudstack
+- cocoon
 - commons
 - creadur
 - ctakes
@@ -119,7 +120,6 @@ projects:
 - knox
 - kylin
 - logging
-- madlib
 - mahout
 - manifoldcf
 - maven

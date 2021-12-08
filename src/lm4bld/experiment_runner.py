@@ -7,6 +7,7 @@ from lm4bld.experiment.nlp import CrossFoldExperiment
 from lm4bld.experiment.nlp import CrossProjectTrainModelsExperiment
 from lm4bld.experiment.nlp import NextTokenExperiment
 from lm4bld.experiment.nlp import TokenizeExperiment
+from lm4bld.experiment.nlp import LocExperiment
 
 import lm4bld.experiment.config as config
 
@@ -33,9 +34,6 @@ def main():
         futures_list += exp.createFutures()
 
     for future in concurrent.futures.as_completed(futures_list):
-        #assert (future.done() and not future.cancelled()
-        #        and future.exception() is None)
-
         print(future.result())
 
     executor.shutdown()

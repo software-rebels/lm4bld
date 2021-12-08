@@ -8,6 +8,8 @@ from lm4bld.experiment.validation import JavaNextTokenValidator
 from lm4bld.experiment.validation import PomNextTokenValidator
 from lm4bld.experiment.validation import JavaTokenizeValidator
 from lm4bld.experiment.validation import PomTokenizeValidator
+from lm4bld.experiment.validation import JavaLocValidator
+from lm4bld.experiment.validation import PomLocValidator
 from lm4bld.experiment.api import Experiment
 
 class CrossFoldExperiment(Experiment):
@@ -44,3 +46,10 @@ class TokenizeExperiment(Experiment):
 
     def getPomValidator(self):
         return PomTokenizeValidator(self.project, self.conf)
+
+class LocExperiment(Experiment):
+    def getSrcValidator(self):
+        return JavaLocValidator(self.project, self.conf)
+
+    def getPomValidator(self):
+        return PomLocValidator(self.project, self.conf)

@@ -383,3 +383,33 @@ class PomTokenizeValidator(TokenizeValidator):
 class JavaTokenizeValidator(TokenizeValidator):
     def __init__(self, project, conf):
         super().__init__(project, conf, conf.get_srclist(project), JavaTokenizer)
+
+class LocValidator(NLPValidator, metaclass=ABCMeta):
+    @abstractmethod
+    def output_str(self, count):
+        raise NotImplementedError()
+
+    def validate(self, executor):
+        futures_list = list()
+        futures_list.append(executor.submit(self.countlines))
+
+        return futures_list
+
+    def countlines(self):
+        return self.output_str(len(self.load_sents()))
+
+class PomLocValidator(LocValidator):
+    def __init__(self, project, conf):
+        super().__init__(project, conf, None, conf.get_pomlist(project),
+                         PomTokenizer)
+
+    def output_str(self, count):
+        return f"{self.project},pom,{count}"
+
+class JavaLocValidator(LocValidator):
+    def __init__(self, project, conf):
+        super().__init__(project, conf, None, conf.get_srclist(project),
+                         JavaTokenizer)
+
+    def output_str(self, count):
+        return f"{self.project},java,{count}"

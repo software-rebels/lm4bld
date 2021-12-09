@@ -9,6 +9,7 @@ from nltk.lm.preprocessing import pad_both_ends
 from nltk.util import everygrams
 
 from lm4bld.models.nl import NGramModel
+from lm4bld.models.nl import LSTMModel
 from lm4bld.models.tokenize import JavaTokenizer
 from lm4bld.models.tokenize import PomTokenizer
 
@@ -218,7 +219,7 @@ class CrossProjectTestModelsValidator(NLPValidator, metaclass=ABCMeta):
         testCorpus = testValidator.load_data()
 
         my_fit = self.loadModel()
-        unk_rate, entropy = self.testModel(my_fit, testCorpus, self.order)
+        unk_rate, entropy = self.testModel(my_fit, testCorpus)
 
         return self.output_str(self.project, otherProj, unk_rate, entropy)
 

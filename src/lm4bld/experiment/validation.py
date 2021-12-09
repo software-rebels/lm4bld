@@ -8,6 +8,7 @@ from nltk.lm.preprocessing import pad_both_ends
 from nltk.util import everygrams
 
 from lm4bld.nlp.model import NGramModel
+from lm4bld.nlp.model import LSTMModel
 from lm4bld.nlp.tokenize import JavaTokenizer
 from lm4bld.nlp.tokenize import PomTokenizer
 
@@ -53,19 +54,13 @@ class NLPValidator(metaclass=ABCMeta):
         return self.project
 
     def trainModel(self, trainCorpus, order):
-        fitter = NGramModel(order)
+        fitter = LSTMModel(order)
         fitter.fit(trainCorpus)
 
         return fitter
 
-    def testModel(self, fitter, sents, order):
-        ngrams = list()
-
-        for sent in sents:
-            paddedTokens = list(pad_both_ends(sent, n=order))
-            ngrams += list(everygrams(paddedTokens, max_len=order))
-
-        return fitter.unkRate(ngrams), fitter.crossEntropy(ngrams)
+    def testModel(self, fitter, sents):
+        return fitter.unkRate(sents), fitter.crossEntropy(sents)
 
     @abstractmethod
     def validate(self, executor):
@@ -101,7 +96,7 @@ class CrossFoldValidator(NLPValidator, metaclass=ABCMeta):
 
     def nFoldJob(self, trainCorpus, testCorpus, order, fold, iteration):
         fitter = self.trainModel(trainCorpus, order)
-        unk_rate, entropy = self.testModel(fitter, testCorpus, order)
+        unk_rate, entropy = self.testModel(fitter, testCorpus)
 
         return self.output_str(self.project, unk_rate, entropy, order, fold,
                                iteration)
@@ -215,7 +210,7 @@ class CrossProjectTestModelsValidator(NLPValidator, metaclass=ABCMeta):
         testCorpus = testValidator.load_sents()
 
         my_fit = self.loadModel()
-        unk_rate, entropy = self.testModel(my_fit, testCorpus, self.order)
+        unk_rate, entropy = self.testModel(my_fit, testCorpus)
 
         return self.output_str(self.project, otherProj, unk_rate, entropy)
 

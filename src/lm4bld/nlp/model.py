@@ -50,7 +50,7 @@ class NGramModel:
         return sorted_sample[0:nCandidates]
 
 class LSTMModel:
-    def __init__(self):
+    def __init__(self, order):
         self.tokenizer = Tokenizer()
 
     def doFit(self, X, y, max_length):

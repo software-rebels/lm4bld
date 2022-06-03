@@ -1,3 +1,5 @@
+import json
+import os
 import re
 
 from nltk.tokenize import RegexpTokenizer
@@ -13,7 +15,7 @@ class AbstractTokenizer(metaclass=ABCMeta):
         return re.compile(r"\d+(?:\.[v\d]+)+(?:[-\w]*)?")
 
     def path_re(self):
-        return re.compile(r"\w+(?:\/[\w\.\*\-]+)+")
+        return re.compile(r"\w+(?:\:\/)?(?:\/[\w\.\*\-]+)+(?:\:[0-9]+)?\/?")
 
     @abstractmethod
     def comment_re(self):
@@ -23,22 +25,33 @@ class AbstractTokenizer(metaclass=ABCMeta):
     def tokenizer(self):
         raise NotImplementedError()
 
+    def get_token_file(self):
+        tokenfile = self.filename
+        tokenfile = tokenfile.replace(self.prefix, self.tokenprefix) + ".json"
+
+        tokendir = os.path.dirname(tokenfile)
+        os.makedirs(tokendir, exist_ok=True)
+
+        return tokenfile 
+
     def preprocess_strings(self, strdata):
         comment_cleanup = self.comment_re()
         strdata = re.sub(comment_cleanup, "", strdata)
 
-        if (self.versions):
-            version_cleanup = self.version_re()
-            strdata =re.sub(version_cleanup, "<VERSNUM>", strdata)
-
         if (self.paths):
             path_cleanup = self.path_re()
-            strdata = re.sub(path_cleanup, "<PATHSTR>", strdata)
+            strdata = re.sub(path_cleanup, "__path_locator__", strdata)
+
+        if (self.versions):
+            version_cleanup = self.version_re()
+            strdata =re.sub(version_cleanup, "__vers_num__", strdata)
 
         return strdata
 
     def tokenize(self):
-        strdata = self.preprocess_strings(self.fhandle.read())
+        fhandle = open(self.filename, 'r', encoding="ISO-8859-1")
+        strdata = self.preprocess_strings(fhandle.read())
+        fhandle.close()
         return self.tokenizer().tokenize(strdata)
 
     # Default case: Do nothing
@@ -59,7 +72,20 @@ class AbstractTokenizer(metaclass=ABCMeta):
             else:
                 sent.append(self.normalize(tok))
 
-        return sents
+        outfile = self.get_token_file()
+        out_handle = open(outfile, 'w')
+        json.dump(sents, out_handle)
+        out_handle.close()
+
+        return outfile
+
+    def load_tokens(self, tarhandle):
+        tokenfile = self.get_token_file()
+        token_handle = tarhandle.extractfile(tokenfile) if tarhandle else open(tokenfile, 'r', encoding="ISO-8859-1")
+        tokens = json.load(token_handle)
+        token_handle.close()
+
+        return tokens
 
 class PomTokenizer(AbstractTokenizer):
     def comment_re(self):
@@ -74,7 +100,8 @@ class PomTokenizer(AbstractTokenizer):
 
 class JavaTokenizer(AbstractTokenizer):
     def comment_re(self):
-        return re.compile(r"\/\*[\s\S]*?\*\/|\/\/[\s\S]*?")
+        #return re.compile(r"\/\*[\s\S]*?\*\/|\/\/[\s\S]*?")
+        return re.compile(r"(\/\*[\s\S]*?\*\/|\/\/[\s\S]*?)")
 
     def tokenizer(self):
         return RegexpTokenizer('[\"\']|\n|\=|\.|\,|\:|\;|\-|\(|\)|\{|\}|\[|\]|\!|\@|\#|\$|\%|\^|\&|\*|\+|\~|\/|\<|\>|\w+')

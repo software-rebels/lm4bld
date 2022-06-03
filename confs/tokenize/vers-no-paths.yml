@@ -1,48 +1,22 @@
 ################################################################################
-# RQ1 config
-################################################################################
-
-niter: 1 # Number of iterations of N folds
-nfolds: 10 # Number of folds per iteration
-minorder: 1 # The minimum number of grams to explore
-maxorder: 5 # The maximum number of grams to explore
-
-################################################################################
-# RQ2 config
-################################################################################
-
-crossproj_order: 1 # Specified in Hindle et al.
-modelprefix: models
-
-################################################################################
-# RQ4 config
-################################################################################
-
-next_token_order: 3 # Specified in Hindle et al.
-next_token_test_size: 40
-min_candidates: 2
-max_candidates: 10
-test_ratio_threshold: 0.5
-
-################################################################################
 # Tokenizer config
 ################################################################################
 
-normalize_version_strings: false
+normalize_version_strings: true
 normalize_paths: false
 prefix: ../data/sources
-tokenprefix: ../data/tokens/no-vers-no-paths
+tokenprefix: ../data/tokens/vers-no-paths
 
 ################################################################################
 # Global config
 ################################################################################
 
-task: LocExperiment # Valid settings: CrossFoldExperiment, CrossProjectExperiment, NextTokenExperiment, TokenizeExperiment
+task: TokenizeExperiment
 
-process_source: true 
+process_source: true
 process_poms: true
 
-maxjobs: 4 # Size of the process pool to execute tasks in parallel
+maxjobs: 28 # Size of the process pool to execute tasks in parallel
 
 pomlistdir: pomlists
 srclistdir: javalists
@@ -73,7 +47,6 @@ projects:
 - chemistry
 - clerezza
 - cloudstack
-- cocoon
 - commons
 - creadur
 - ctakes

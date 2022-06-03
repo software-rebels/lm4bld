@@ -1,7 +1,8 @@
-#import itertools
 from abc import ABCMeta, abstractmethod
+import pickle
 import os
 import random
+import tarfile
 
 from nltk.lm.preprocessing import pad_both_ends
 from nltk.util import everygrams
@@ -14,39 +15,55 @@ class NLPValidator(metaclass=ABCMeta):
     def __init__(self, project, conf, order, listfile, tokenizer):
         self.project = project
         self.order = order 
-        self.versions = conf.get_versions()
-        self.paths = conf.get_paths()
+        self.listfile = listfile
         self.tokenizer = tokenizer
-
-        fhandle = open(listfile, 'r')
-        self.listfiles = list()
-        self.allSents = list()
-        for file in fhandle.readlines():
-            pomfile = file.strip()
-            self.listfiles.append(pomfile)
-            t = tokenizer(pomfile, self.versions, self.paths)
-            self.allSents += t.sentence_tokenize()
+        self.prefix = conf.get_prefix()
+        self.tokenprefix = conf.get_tokenprefix()
+        self.tarfile = conf.get_tarfile()
 
         random.seed(666)
 
-    def getSents(self):
-        return self.allSents
+    def load_filenames(self):
+        flist = list()
+        fhandle = open(self.listfile, 'r', encoding="ISO-8859-1")
+        for f in fhandle.readlines():
+            flist.append(f.strip())
+
+        fhandle.close()
+        return flist
+
+    def load_sents(self, flist=None):
+        sents = list()
+
+        if flist is None:
+            flist = self.load_filenames()
+
+        tarhandle = tarfile.open(self.tarfile, 'r:') if self.tarfile else None
+
+        for f in flist:
+            t = self.tokenizer(f, self.prefix, self.tokenprefix)
+            sents += t.load_tokens(tarhandle)
+
+        if tarhandle:
+            tarhandle.close()
+
+        return sents
 
     def getProject(self):
         return self.project
 
-    def trainModel(self, trainCorpus):
-        fitter = NGramModel(self.order)
+    def trainModel(self, trainCorpus, order):
+        fitter = NGramModel(order)
         fitter.fit(trainCorpus)
 
         return fitter
 
-    def testModel(self, fitter, sents):
+    def testModel(self, fitter, sents, order):
         ngrams = list()
 
         for sent in sents:
-            paddedTokens = list(pad_both_ends(sent, n=self.order))
-            ngrams += list(everygrams(paddedTokens, max_len=self.order))
+            paddedTokens = list(pad_both_ends(sent, n=order))
+            ngrams += list(everygrams(paddedTokens, max_len=order))
 
         return fitter.unkRate(ngrams), fitter.crossEntropy(ngrams)
 
@@ -59,6 +76,8 @@ class CrossFoldValidator(NLPValidator, metaclass=ABCMeta):
         super().__init__(project, conf, order, listfile, tokenizer)
         self.nfolds = conf.get_nfolds()
         self.niter = conf.get_niter()
+        self.minorder = conf.get_minorder()
+        self.maxorder = conf.get_maxorder()+1
 
     @abstractmethod
     def output_str(self, proj, unk_rate, entropy, order, fold, iteration):
@@ -70,7 +89,7 @@ class CrossFoldValidator(NLPValidator, metaclass=ABCMeta):
         for fold in range(self.nfolds):
             foldSents.append(list())
 
-        myList = self.allSents
+        myList = self.load_sents()
         random.shuffle(myList)
 
         cntr = 0
@@ -80,31 +99,31 @@ class CrossFoldValidator(NLPValidator, metaclass=ABCMeta):
 
         return foldSents
 
-    def nFoldJob(self, trainCorpus, testCorpus, fold, iteration):
-        fitter = self.trainModel(trainCorpus)
-        unk_rate, entropy = self.testModel(fitter, testCorpus)
+    def nFoldJob(self, trainCorpus, testCorpus, order, fold, iteration):
+        fitter = self.trainModel(trainCorpus, order)
+        unk_rate, entropy = self.testModel(fitter, testCorpus, order)
 
-        p = self.project
-        o = self.order
-        return self.output_str(p, unk_rate, entropy, o, fold, iteration)
+        return self.output_str(self.project, unk_rate, entropy, order, fold,
+                               iteration)
 
     def validate(self, executor):
         my_futures = list()
 
-        for iteration in range(self.niter):
-            myFolds = self.getFolds()
+        for order in range(self.minorder, self.maxorder):
+            for iteration in range(self.niter):
+                myFolds = self.getFolds()
 
-            for fold in range(self.nfolds):
-                testCorpus = myFolds[fold]
+                for fold in range(self.nfolds):
+                    testCorpus = myFolds[fold]
 
-                trainCorpus = list()
-                for trainIdx in range(self.nfolds):
-                    if trainIdx != fold:
-                        trainCorpus += myFolds[trainIdx]
+                    trainCorpus = list()
+                    for trainIdx in range(self.nfolds):
+                        if trainIdx != fold:
+                            trainCorpus += myFolds[trainIdx]
                 
-                f = executor.submit(self.nFoldJob, trainCorpus, testCorpus,
-                                    fold, iteration)
-                my_futures.append(f)
+                    f = executor.submit(self.nFoldJob, trainCorpus, testCorpus,
+                                    order, fold, iteration)
+                    my_futures.append(f)
 
         return my_futures
 
@@ -128,12 +147,52 @@ class JavaCrossFoldValidator(CrossFoldValidator):
         entline = f'{proj},java,entropy,{entropy},{order},{fold},{iteration}'
         return f'{unkline}{os.linesep}{entline}'
 
-class CrossProjectValidator(NLPValidator, metaclass=ABCMeta):
+class CrossProjectTrainModelsValidator(NLPValidator, metaclass=ABCMeta):
     def __init__(self, project, conf, listfile, tokenizer):
         super().__init__(project, conf, conf.get_crossproj_order(), listfile,
                          tokenizer)
-        self.my_fit = None
+        self.modelprefix = conf.get_modelprefix()
+
+    def validate(self, executor):
+        futures_list = list()
+        futures_list.append(executor.submit(self.trainAndSaveModel))
+        return futures_list
+
+    @abstractmethod
+    def get_model_fname(self):
+        raise NotImplementedError()
+
+    def trainAndSaveModel(self):
+        model_fname = self.get_model_fname()
+        my_fit = self.trainModel(self.load_sents(), self.order)
+
+        fhandle = open(model_fname, 'wb')
+        pickle.dump(my_fit, fhandle)
+        fhandle.close()
+
+        return model_fname
+
+class JavaCrossProjectTrainModelsValidator(CrossProjectTrainModelsValidator):
+    def __init__(self, project, conf):
+        super().__init__(project, conf, conf.get_srclist(project),
+                         JavaTokenizer)
+
+    def get_model_fname(self):
+        return f"{self.modelprefix}{os.path.sep}{self.project}-java.pkl"
+
+class PomCrossProjectTrainModelsValidator(CrossProjectTrainModelsValidator):
+    def __init__(self, project, conf):
+        super().__init__(project, conf, conf.get_pomlist(project), PomTokenizer)
+
+    def get_model_fname(self):
+        return f"{self.modelprefix}{os.path.sep}{self.project}-pom.pkl"
+
+class CrossProjectTestModelsValidator(NLPValidator, metaclass=ABCMeta):
+    def __init__(self, project, conf, listfile, tokenizer):
+        super().__init__(project, conf, conf.get_crossproj_order(), listfile,
+                         tokenizer)
         self.projects = conf.get_projects()
+        self.modelprefix = conf.get_modelprefix()
 
     @abstractmethod
     def output_str(self, train_proj, test_proj, unk_rate, entropy):
@@ -143,14 +202,20 @@ class CrossProjectValidator(NLPValidator, metaclass=ABCMeta):
     def get_validator(self, projname):
         raise NotImplementedError()
 
+    def loadModel(self):
+        model_fname = self.get_model_fname()
+        fhandle = open(model_fname, "rb")
+        my_fit = pickle.load(fhandle)
+        fhandle.close()
+
+        return my_fit
+
     def crossProjectJob(self, otherProj):
         testValidator = self.get_validator(otherProj)
-        testCorpus = testValidator.getSents()
+        testCorpus = testValidator.load_sents()
 
-        if self.my_fit is None:
-            self.my_fit = self.trainModel(self.allSents)
-
-        unk_rate, entropy = self.testModel(self.my_fit, testCorpus)
+        my_fit = self.loadModel()
+        unk_rate, entropy = self.testModel(my_fit, testCorpus, self.order)
 
         return self.output_str(self.project, otherProj, unk_rate, entropy)
 
@@ -163,10 +228,11 @@ class CrossProjectValidator(NLPValidator, metaclass=ABCMeta):
 
             f = executor.submit(self.crossProjectJob, testProjName)
             futures_list.append(f)
+            #print(self.crossProjectJob(testProjName))
 
         return futures_list
 
-class PomCrossProjectValidator(CrossProjectValidator):
+class PomCrossProjectTestModelsValidator(CrossProjectTestModelsValidator):
     def __init__(self, project, conf):
         super().__init__(project, conf, conf.get_pomlist(project), PomTokenizer)
         self.conf = conf
@@ -175,9 +241,12 @@ class PomCrossProjectValidator(CrossProjectValidator):
         return f'{train_proj},{test_proj},pom,{unk_rate},{entropy}'
 
     def get_validator(self, projname):
-        return PomCrossProjectValidator(projname, self.conf)
+        return PomCrossProjectTestModelsValidator(projname, self.conf)
 
-class JavaCrossProjectValidator(CrossProjectValidator):
+    def get_model_fname(self):
+        return f"{self.modelprefix}{os.path.sep}{self.project}-pom.pkl"
+
+class JavaCrossProjectTestModelsValidator(CrossProjectTestModelsValidator):
     def __init__(self, project, conf):
         super().__init__(project, conf, conf.get_srclist(project),
                          JavaTokenizer)
@@ -187,7 +256,10 @@ class JavaCrossProjectValidator(CrossProjectValidator):
         return f'{train_proj},{test_proj},java,{unk_rate},{entropy}'
 
     def get_validator(self, projname):
-        return JavaCrossProjectValidator(projname, self.conf)
+        return JavaCrossProjectTestModelsValidator(projname, self.conf)
+
+    def get_model_fname(self):
+        return f"{self.modelprefix}{os.path.sep}{self.project}-java.pkl"
 
 class NextTokenValidator(NLPValidator, metaclass=ABCMeta):
     def __init__(self, project, conf, listfile, tokenizer):
@@ -195,22 +267,18 @@ class NextTokenValidator(NLPValidator, metaclass=ABCMeta):
                          tokenizer)
         self.testSize = conf.get_next_token_test_size()
         self.minCandidates = conf.get_min_candidates()
-        self.maxCandidates = conf.get_max_candidates()
+        self.maxCandidates = conf.get_max_candidates() +1
+        self.testRatioThreshold = conf.get_testratiothreshold()
 
     def nextTokenCorpusSplit(self):
-        myList = self.listfiles
+        myList = self.load_filenames()
+        if self.testSize/len(myList) > self.testRatioThreshold:
+            return None, None
+
         random.shuffle(myList)
 
-        # Testing corpus
-        testCorpus = list()
-        for pomfile in myList[0:self.testSize]:
-            t = self.tokenizer(pomfile, self.versions, self.paths)
-            testCorpus += t.sentence_tokenize()
-
-        trainCorpus = list()
-        for pomfile in myList[self.testSize:len(myList)]:
-            t = self.tokenizer(pomfile, self.versions, self.paths)
-            trainCorpus += t.sentence_tokenize()
+        testCorpus = self.load_sents(myList[0:self.testSize])
+        trainCorpus = self.load_sents(myList[self.testSize:len(myList)])
 
         return trainCorpus, testCorpus
 
@@ -260,11 +328,13 @@ class NextTokenValidator(NLPValidator, metaclass=ABCMeta):
     def validate(self, executor):
         futures_list = list()
         trainCorpus, testCorpus = self.nextTokenCorpusSplit()
-        
-        fitter = self.trainModel(trainCorpus)
-        for nCandidates in range(self.minCandidates, (self.maxCandidates+1)):
-            f = executor.submit(self.guessNextTokenEvaluator, fitter, testCorpus, nCandidates)
-            futures_list.append(f)
+
+        if trainCorpus is not None and testCorpus is not None:
+            fitter = self.trainModel(trainCorpus, self.order)
+            for nCandidates in range(self.minCandidates, self.maxCandidates):
+                f = executor.submit(self.guessNextTokenEvaluator, fitter,
+                                    testCorpus, nCandidates)
+                futures_list.append(f)
 
         return futures_list
 
@@ -282,3 +352,64 @@ class PomNextTokenValidator(NextTokenValidator):
 
     def output_str(self, n_candidates, token_len, n_correct, n_incorrect):
         return f'{self.project},pom,{n_candidates},{token_len},{n_correct},{n_incorrect}'
+
+
+class TokenizeValidator(NLPValidator, metaclass=ABCMeta):
+    def __init__(self, project, conf, listfile, tokenizer):
+        super().__init__(project, conf, 3, listfile, tokenizer)
+        self.versions = conf.get_versions()
+        self.paths = conf.get_paths()
+
+    def validate(self, executor):
+        futures_list = list()
+        mylist = self.listfile
+
+        fhandle = open(mylist, 'r')
+        lines = fhandle.readlines()
+        fhandle.close()
+        for file in lines:
+            fname = file.strip()
+            t = self.tokenizer(fname, self.prefix, self.tokenprefix,
+                               self.versions, self.paths)
+            f = executor.submit(t.sentence_tokenize)
+            futures_list.append(f)
+
+        return futures_list
+
+class PomTokenizeValidator(TokenizeValidator):
+    def __init__(self, project, conf):
+        super().__init__(project, conf, conf.get_pomlist(project), PomTokenizer)
+
+class JavaTokenizeValidator(TokenizeValidator):
+    def __init__(self, project, conf):
+        super().__init__(project, conf, conf.get_srclist(project), JavaTokenizer)
+
+class LocValidator(NLPValidator, metaclass=ABCMeta):
+    @abstractmethod
+    def output_str(self, count):
+        raise NotImplementedError()
+
+    def validate(self, executor):
+        futures_list = list()
+        futures_list.append(executor.submit(self.countlines))
+
+        return futures_list
+
+    def countlines(self):
+        return self.output_str(len(self.load_sents()))
+
+class PomLocValidator(LocValidator):
+    def __init__(self, project, conf):
+        super().__init__(project, conf, None, conf.get_pomlist(project),
+                         PomTokenizer)
+
+    def output_str(self, count):
+        return f"{self.project},pom,{count}"
+
+class JavaLocValidator(LocValidator):
+    def __init__(self, project, conf):
+        super().__init__(project, conf, None, conf.get_srclist(project),
+                         JavaTokenizer)
+
+    def output_str(self, count):
+        return f"{self.project},java,{count}"

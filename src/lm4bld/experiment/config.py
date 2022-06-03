@@ -20,11 +20,22 @@ MIN_CANDIDATES = 'min_candidates'
 MAX_CANDIDATES = 'max_candidates'
 POMLISTDIR = 'pomlistdir'
 SRCLISTDIR = 'srclistdir'
+PREFIX = 'prefix'
+TOKENPREFIX = 'tokenprefix'
+MODELPREFIX = 'modelprefix'
+TESTRATIOTHRESHOLD = 'test_ratio_threshold'
+PROCESS_POMS = 'process_poms'
+PROCESS_SOURCE = 'process_source'
+TARFILE = 'tarfile'
 
 class Config:
-    def __init__(self, conf_file="lm4bld.yml"):
+    def __init__(self, conf_file):
+        if conf_file is None:
+            conf_file = CONF_FILE
+
         fhandle = open(conf_file, 'r')
         self.confdata = yaml.load(fhandle, Loader=yaml.FullLoader)
+        fhandle.close()
 
     def get_task(self):
         return self.confdata[TASK]
@@ -67,6 +78,27 @@ class Config:
 
     def get_max_candidates(self):
         return self.confdata[MAX_CANDIDATES]
+
+    def get_prefix(self):
+        return self.confdata[PREFIX]
+
+    def get_tokenprefix(self):
+        return self.confdata[TOKENPREFIX]
+
+    def get_modelprefix(self):
+        return self.confdata[MODELPREFIX]
+
+    def get_testratiothreshold(self):
+        return self.confdata[TESTRATIOTHRESHOLD]
+
+    def get_process_source(self):
+        return self.confdata[PROCESS_SOURCE]
+
+    def get_process_poms(self):
+        return self.confdata[PROCESS_POMS]
+
+    def get_tarfile(self):
+        return self.confdata[TARFILE] if TARFILE in self.confdata else None
 
     def get_pomlist(self, projname):
         return f'{self.confdata[POMLISTDIR]}{os.path.sep}{projname}.txt'

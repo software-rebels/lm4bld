@@ -17,7 +17,9 @@ class Experiment(metaclass=ABCMeta):
 
     def createFutures(self):
         futures_list = list()
-        futures_list += self.getPomValidator().validate(self.executor)
-        futures_list += self.getSrcValidator().validate(self.executor)
+        if self.conf.get_process_poms():
+            futures_list += self.getPomValidator().validate(self.executor)
+        if self.conf.get_process_source():
+            futures_list += self.getSrcValidator().validate(self.executor)
 
         return futures_list

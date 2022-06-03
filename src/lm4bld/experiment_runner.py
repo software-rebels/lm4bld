@@ -4,8 +4,10 @@ import os
 import sys
 
 from lm4bld.experiment.nlp import CrossFoldExperiment
-from lm4bld.experiment.nlp import CrossProjectExperiment
+from lm4bld.experiment.nlp import CrossProjectTrainModelsExperiment
 from lm4bld.experiment.nlp import NextTokenExperiment
+from lm4bld.experiment.nlp import TokenizeExperiment
+from lm4bld.experiment.nlp import LocExperiment
 
 import lm4bld.experiment.config as config
 
@@ -13,8 +15,11 @@ def lookup_class(mod_name, cname):
     mod = importlib.import_module(mod_name)
     return getattr(mod, cname)
 
-if __name__ == "__main__":
-    conf = config.Config()
+def main():
+    # Kind of fragile, but...
+    cfile = sys.argv[1] if len(sys.argv) == 2 else None
+    conf = config.Config(cfile)
+
     maxjobs = conf.get_maxjobs() 
     exp_class = lookup_class("lm4bld.experiment.nlp", conf.get_task()) 
 
@@ -29,9 +34,9 @@ if __name__ == "__main__":
         futures_list += exp.createFutures()
 
     for future in concurrent.futures.as_completed(futures_list):
-        assert (future.done() and not future.cancelled()
-                and future.exception() is None)
-
         print(future.result())
 
     executor.shutdown()
+
+if __name__ == "__main__":
+    main()

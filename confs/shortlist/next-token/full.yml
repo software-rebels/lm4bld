@@ -1,0 +1,77 @@
+################################################################################
+# RQ4 config
+################################################################################
+
+next_token_order: 3 # Specified in Hindle et al.
+next_token_test_size: 40 # Specified in Hindle et al.
+min_candidates: 1
+max_candidates: 10
+test_ratio_threshold: 0.5 # Any project where the next_token_test_size is larger
+                          # than this percentage is ignored
+
+################################################################################
+# Tokenizer config
+################################################################################
+
+prefix: ../data/sources
+tokenprefix: ../data/tokens/vers-paths
+
+################################################################################
+# Global config
+################################################################################
+
+task: NextTokenExperiment
+
+process_source: true
+process_poms: true
+
+maxjobs: 24 # Size of the process pool to execute tasks in parallel
+
+pomlistdir: pomlists
+srclistdir: javalists
+
+# These 31 projects satisfy the default test_ratio_threshold (0.5). If the ratio
+# increased (e.g., to 0.6), then the full list of projects should be appended
+# from another configuration file (e.g., confs/cross-fold/full.yml). The
+# challenge is that there are fewer pom.xml files than .java files, so the same
+# threshold will be far more selective of Maven processing jobs than Java ones.
+# I split the job into two when collecting the data. First, I set process_source
+# to false and executed a job with the full list of projects. Then, I selected
+# the surviving projects from the output of that job and used it as input to
+# another job where process_poms was false and process_source was true. Ganky,
+# but it worked...
+#
+# tl;dr: This list is different than the other configurations. If changes are
+# made to the RQ4 config section above, this list may need to be updated.
+projects:
+- activemq
+- archiva
+- aries
+- asterixdb
+- axis
+- brooklyn
+- camel
+- commons
+- cxf
+- directory
+- dubbo
+- felix
+- flink
+- hadoop
+- isis
+- jackrabbit
+- james
+- jclouds
+- karaf
+- nifi
+- plc4x
+- portals
+- pulsar
+- qpid
+- royale
+- servicecomb
+- streams
+- syncope
+- tomee
+- uima
+- zeppelin

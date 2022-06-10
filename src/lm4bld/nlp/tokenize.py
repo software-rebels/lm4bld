@@ -6,8 +6,11 @@ from nltk.tokenize import RegexpTokenizer
 from abc import ABCMeta, abstractmethod
 
 class AbstractTokenizer(metaclass=ABCMeta):
-    def __init__(self, filename, versions, paths):
-        self.fhandle = open(filename, 'r', encoding="ISO-8859-1")
+    def __init__(self, filename, prefix, tokenprefix, versions=False,
+                 paths=False):
+        self.filename = filename
+        self.prefix = prefix
+        self.tokenprefix = tokenprefix
         self.versions = versions 
         self.paths = paths
 

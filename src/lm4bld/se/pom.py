@@ -3,13 +3,14 @@ import xml.etree.ElementTree as ElementTree
 from collections import Counter
 
 class PomModel:
-    def __init__(self):
+    def __init__(self, order):
         self.tagmap = {}
         self.tagvalmap = {}
         self.tagvallocmap = {}
         self.attribmap = {}
         self.attribvalmap = {}
         self.attribvallocmap = {}
+        self.order = order
 
     def removeNamespace(self, s):
         NS_END = "}"
@@ -35,7 +36,7 @@ class PomModel:
             print("%s=%s" % (fulltagstr, tagcontent))
             self.addToMap(self.tagvalmap, tagstr, tagcontent)
             self.addToMap(self.tagvallocmap, fulltagstr, tagcontent)
-            
+
         # If we have some attribs
         for key in tag.attrib:
             keystr = self.removeNamespace(key)
@@ -53,9 +54,20 @@ class PomModel:
         hist = Counter(taglist)
 
         return hist.most_common()
-        
+
     def print(self):
         print(self.tagmap)
+
+    def fit(self, flist):
+        for f in flist:
+            pp = PomParse(f, self)
+            pp.flatten()
+
+    def crossEntropy(self, flist):
+        return -1
+
+    def unkRate(self, flist):
+        return -1
 
 class PomParse:
     def __init__(self, filename, model=None):

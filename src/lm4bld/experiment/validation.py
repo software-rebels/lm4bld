@@ -11,8 +11,8 @@ from lm4bld.nlp.model import NGramModel
 from lm4bld.nlp.tokenize import JavaTokenizer
 from lm4bld.nlp.tokenize import PomTokenizer
 
-class NLPValidator(metaclass=ABCMeta):
-    def __init__(self, project, conf, order, listfile, tokenizer):
+class Validator(metaclass=ABCMeta):
+    def __init__(self, project, conf, order, listfile, tokenizer, fitclass):
         self.project = project
         self.order = order 
         self.listfile = listfile
@@ -20,6 +20,7 @@ class NLPValidator(metaclass=ABCMeta):
         self.prefix = conf.get_prefix()
         self.tokenprefix = conf.get_tokenprefix()
         self.tarfile = conf.get_tarfile()
+        self.fitclass = fitclass
 
         random.seed(666)
 
@@ -32,7 +33,33 @@ class NLPValidator(metaclass=ABCMeta):
         fhandle.close()
         return flist
 
-    def load_sents(self, flist=None):
+    def trainModel(self, trainCorpus, order):
+        fitter = self.fitclass(order)
+        fitter.fit(trainCorpus)
+
+        return fitter
+
+    def testModel(self, fitter, testdata, order):
+        preppedData = self.prep_test_data(testdata, order)
+        return fitter.unkRate(preppedData), fitter.crossEntropy(preppedData)
+
+    def getProject(self):
+        return self.project
+
+    @abstractmethod
+    def load_data(self, flist):
+        raise NotImplementedError()
+
+    @abstractmethod
+    def prep_test_data(self, testdata, order):
+        raise NotImplementedError()
+
+    @abstractmethod
+    def validate(self, executor):
+        raise NotImplementedError()
+
+class NLPValidator(Validator, metaclass=ABCMeta):
+    def load_data(self, flist=None):
         sents = list()
 
         if flist is None:
@@ -49,55 +76,53 @@ class NLPValidator(metaclass=ABCMeta):
 
         return sents
 
-    def getProject(self):
-        return self.project
-
-    def trainModel(self, trainCorpus, order):
-        fitter = NGramModel(order)
-        fitter.fit(trainCorpus)
-
-        return fitter
-
-    def testModel(self, fitter, sents, order):
+    def prep_test_data(self, testdata, order):
         ngrams = list()
 
-        for sent in sents:
+        for sent in testdata:
             paddedTokens = list(pad_both_ends(sent, n=order))
             ngrams += list(everygrams(paddedTokens, max_len=order))
 
-        return fitter.unkRate(ngrams), fitter.crossEntropy(ngrams)
+        return ngrams
 
-    @abstractmethod
-    def validate(self, executor):
-        raise NotImplementedError()
+class SEValidator(Validator, metaclass=ABCMeta):
+    def load_data(self, flist=None):
+        if flist is None:
+            flist = self.load_filenames()
+
+        return flist
+
+    def prep_test_data(self, testdata, order):
+        return testdata
 
 class CrossFoldValidator(NLPValidator, metaclass=ABCMeta):
-    def __init__(self, project, conf, order, listfile, tokenizer):
+    def __init__(self, project, conf, order, listfile, tokenizer, fitter):
         super().__init__(project, conf, order, listfile, tokenizer)
         self.nfolds = conf.get_nfolds()
         self.niter = conf.get_niter()
         self.minorder = conf.get_minorder()
         self.maxorder = conf.get_maxorder()+1
+        self.fitter = fitter
 
     @abstractmethod
     def output_str(self, proj, unk_rate, entropy, order, fold, iteration):
         raise NotImplementedError()
 
     def getFolds(self):
-        foldSents = list()
+        folds = list()
 
         for fold in range(self.nfolds):
-            foldSents.append(list())
+            folds.append(list())
 
-        myList = self.load_sents()
+        myList = self.load_data()
         random.shuffle(myList)
 
         cntr = 0
-        for sent in myList:
-            foldSents[cntr % self.nfolds].append(sent)
+        for item in myList:
+            folds[cntr % self.nfolds].append(item)
             cntr += 1
 
-        return foldSents
+        return folds
 
     def nFoldJob(self, trainCorpus, testCorpus, order, fold, iteration):
         fitter = self.trainModel(trainCorpus, order)
@@ -120,7 +145,7 @@ class CrossFoldValidator(NLPValidator, metaclass=ABCMeta):
                     for trainIdx in range(self.nfolds):
                         if trainIdx != fold:
                             trainCorpus += myFolds[trainIdx]
-                
+
                     f = executor.submit(self.nFoldJob, trainCorpus, testCorpus,
                                     order, fold, iteration)
                     my_futures.append(f)
@@ -148,9 +173,9 @@ class JavaCrossFoldValidator(CrossFoldValidator):
         return f'{unkline}{os.linesep}{entline}'
 
 class CrossProjectTrainModelsValidator(NLPValidator, metaclass=ABCMeta):
-    def __init__(self, project, conf, listfile, tokenizer):
+    def __init__(self, project, conf, listfile, tokenizer, fitclass=NGramModel):
         super().__init__(project, conf, conf.get_crossproj_order(), listfile,
-                         tokenizer)
+                         tokenizer, fitclass)
         self.modelprefix = conf.get_modelprefix()
 
     def validate(self, executor):
@@ -164,7 +189,7 @@ class CrossProjectTrainModelsValidator(NLPValidator, metaclass=ABCMeta):
 
     def trainAndSaveModel(self):
         model_fname = self.get_model_fname()
-        my_fit = self.trainModel(self.load_sents(), self.order)
+        my_fit = self.trainModel(self.load_data(), self.order)
 
         fhandle = open(model_fname, 'wb')
         pickle.dump(my_fit, fhandle)
@@ -212,7 +237,7 @@ class CrossProjectTestModelsValidator(NLPValidator, metaclass=ABCMeta):
 
     def crossProjectJob(self, otherProj):
         testValidator = self.get_validator(otherProj)
-        testCorpus = testValidator.load_sents()
+        testCorpus = testValidator.load_data()
 
         my_fit = self.loadModel()
         unk_rate, entropy = self.testModel(my_fit, testCorpus, self.order)
@@ -262,9 +287,9 @@ class JavaCrossProjectTestModelsValidator(CrossProjectTestModelsValidator):
         return f"{self.modelprefix}{os.path.sep}{self.project}-java.pkl"
 
 class NextTokenValidator(NLPValidator, metaclass=ABCMeta):
-    def __init__(self, project, conf, listfile, tokenizer):
+    def __init__(self, project, conf, listfile, tokenizer, fitclass=NGramModel):
         super().__init__(project, conf, conf.get_next_token_order(), listfile,
-                         tokenizer)
+                         tokenizer, fitclass)
         self.testSize = conf.get_next_token_test_size()
         self.minCandidates = conf.get_min_candidates()
         self.maxCandidates = conf.get_max_candidates() +1
@@ -277,8 +302,8 @@ class NextTokenValidator(NLPValidator, metaclass=ABCMeta):
 
         random.shuffle(myList)
 
-        testCorpus = self.load_sents(myList[0:self.testSize])
-        trainCorpus = self.load_sents(myList[self.testSize:len(myList)])
+        testCorpus = self.load_data(myList[0:self.testSize])
+        trainCorpus = self.load_data(myList[self.testSize:len(myList)])
 
         return trainCorpus, testCorpus
 
@@ -396,7 +421,7 @@ class LocValidator(NLPValidator, metaclass=ABCMeta):
         return futures_list
 
     def countlines(self):
-        return self.output_str(len(self.load_sents()))
+        return self.output_str(len(self.load_data()))
 
 class PomLocValidator(LocValidator):
     def __init__(self, project, conf):

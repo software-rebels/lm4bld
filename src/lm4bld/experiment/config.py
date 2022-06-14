@@ -11,6 +11,7 @@ MAXORDER = 'maxorder'
 PROJECTS = 'projects'
 MAXJOBS = 'maxjobs'
 CROSSPROJ_ORDER = 'crossproj_order'
+EXPTYPE = 'exptype'
 TASK = 'task'
 VERSIONS = 'normalize_version_strings'
 PATHS = 'normalize_paths'
@@ -39,6 +40,9 @@ class Config:
 
     def get_task(self):
         return self.confdata[TASK]
+
+    def get_exptype(self):
+        return self.confdata[EXPTYPE]
 
     def get_maxjobs(self):
         return self.confdata[MAXJOBS]

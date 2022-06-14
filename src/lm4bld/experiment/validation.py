@@ -96,8 +96,9 @@ class SEValidator(Validator, metaclass=ABCMeta):
         return testdata
 
 class CrossFoldValidator(NLPValidator, metaclass=ABCMeta):
-    def __init__(self, project, conf, order, listfile, tokenizer, fitter):
-        super().__init__(project, conf, order, listfile, tokenizer)
+    def __init__(self, project, conf, order, listfile, tokenizer, fitter,
+                 fitclass):
+        super().__init__(project, conf, order, listfile, tokenizer, fitclass)
         self.nfolds = conf.get_nfolds()
         self.niter = conf.get_niter()
         self.minorder = conf.get_minorder()
@@ -153,9 +154,9 @@ class CrossFoldValidator(NLPValidator, metaclass=ABCMeta):
         return my_futures
 
 class PomCrossFoldValidator(CrossFoldValidator):
-    def __init__(self, project, conf, order):
+    def __init__(self, project, conf, order, fitclass=NGramModel):
         super().__init__(project, conf, order, conf.get_pomlist(project),
-                         PomTokenizer)
+                         PomTokenizer, fitclass)
 
     def output_str(self, proj, unk_rate, entropy, order, fold, iteration):
         unkline = f'{proj},pom,unk_rate,{unk_rate},{order},{fold},{iteration}'
@@ -163,9 +164,9 @@ class PomCrossFoldValidator(CrossFoldValidator):
         return f'{unkline}{os.linesep}{entline}'
 
 class JavaCrossFoldValidator(CrossFoldValidator):
-    def __init__(self, project, conf, order):
+    def __init__(self, project, conf, order, fitclass=NGramModel):
         super().__init__(project, conf, order, conf.get_srclist(project),
-                         JavaTokenizer)
+                         JavaTokenizer, fitclass)
 
     def output_str(self, proj, unk_rate, entropy, order, fold, iteration):
         unkline = f'{proj},java,unk_rate,{unk_rate},{order},{fold},{iteration}'
@@ -424,17 +425,17 @@ class LocValidator(NLPValidator, metaclass=ABCMeta):
         return self.output_str(len(self.load_data()))
 
 class PomLocValidator(LocValidator):
-    def __init__(self, project, conf):
+    def __init__(self, project, conf, fitclass=NGramModel):
         super().__init__(project, conf, None, conf.get_pomlist(project),
-                         PomTokenizer)
+                         PomTokenizer, fitclass)
 
     def output_str(self, count):
         return f"{self.project},pom,{count}"
 
 class JavaLocValidator(LocValidator):
-    def __init__(self, project, conf):
+    def __init__(self, project, conf, fitclass=NGramModel):
         super().__init__(project, conf, None, conf.get_srclist(project),
-                         JavaTokenizer)
+                         JavaTokenizer, fitclass)
 
     def output_str(self, count):
         return f"{self.project},java,{count}"

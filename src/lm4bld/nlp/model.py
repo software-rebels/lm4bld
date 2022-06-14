@@ -28,7 +28,7 @@ class NGramModel:
                 unk_count += 1
 
         return unk_count / len(ngrams)
-    
+
     def guessNextToken(self, context, nCandidates):
         sorted_sample = sorted(self.model.context_counts(context))
         return sorted_sample[0:nCandidates]

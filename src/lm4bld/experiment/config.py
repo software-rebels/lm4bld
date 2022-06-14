@@ -11,7 +11,6 @@ MAXORDER = 'maxorder'
 PROJECTS = 'projects'
 MAXJOBS = 'maxjobs'
 CROSSPROJ_ORDER = 'crossproj_order'
-EXPTYPE = 'exptype'
 TASK = 'task'
 VERSIONS = 'normalize_version_strings'
 PATHS = 'normalize_paths'
@@ -28,6 +27,8 @@ TESTRATIOTHRESHOLD = 'test_ratio_threshold'
 PROCESS_POMS = 'process_poms'
 PROCESS_SOURCE = 'process_source'
 TARFILE = 'tarfile'
+FITPACKAGE = 'fitpackage'
+FITCLASS = 'fitclass'
 
 class Config:
     def __init__(self, conf_file):
@@ -40,9 +41,6 @@ class Config:
 
     def get_task(self):
         return self.confdata[TASK]
-
-    def get_exptype(self):
-        return self.confdata[EXPTYPE]
 
     def get_maxjobs(self):
         return self.confdata[MAXJOBS]
@@ -109,3 +107,9 @@ class Config:
 
     def get_srclist(self, projname):
         return f'{self.confdata[SRCLISTDIR]}{os.path.sep}{projname}.txt'
+
+    def get_fitpackage(self):
+        return self.confdata[FITPACKAGE]
+
+    def get_fitclass(self):
+        return self.confdata[FITCLASS]

@@ -1,6 +1,7 @@
 from abc import ABCMeta, abstractmethod
-import pickle
+import importlib
 import os
+import pickle
 import random
 import tarfile
 
@@ -23,6 +24,10 @@ class Validator(metaclass=ABCMeta):
         self.fitclass = fitclass
 
         random.seed(666)
+
+    def lookup_class(self, mod_name, cname):
+        mod = importlib.import_module(mod_name)
+        return getattr(mod, cname)
 
     def load_filenames(self):
         flist = list()
@@ -96,14 +101,12 @@ class SEValidator(Validator, metaclass=ABCMeta):
         return testdata
 
 class CrossFoldValidator(NLPValidator, metaclass=ABCMeta):
-    def __init__(self, project, conf, order, listfile, tokenizer, fitter,
-                 fitclass):
+    def __init__(self, project, conf, order, listfile, tokenizer, fitclass):
         super().__init__(project, conf, order, listfile, tokenizer, fitclass)
         self.nfolds = conf.get_nfolds()
         self.niter = conf.get_niter()
         self.minorder = conf.get_minorder()
         self.maxorder = conf.get_maxorder()+1
-        self.fitter = fitter
 
     @abstractmethod
     def output_str(self, proj, unk_rate, entropy, order, fold, iteration):
@@ -154,9 +157,10 @@ class CrossFoldValidator(NLPValidator, metaclass=ABCMeta):
         return my_futures
 
 class PomCrossFoldValidator(CrossFoldValidator):
-    def __init__(self, project, conf, order, fitclass=NGramModel):
+    def __init__(self, project, conf, order):
         super().__init__(project, conf, order, conf.get_pomlist(project),
-                         PomTokenizer, fitclass)
+                         PomTokenizer, self.lookup_class(conf.get_fitpackage(),
+                                                    conf.get_fitclass()))
 
     def output_str(self, proj, unk_rate, entropy, order, fold, iteration):
         unkline = f'{proj},pom,unk_rate,{unk_rate},{order},{fold},{iteration}'
@@ -254,7 +258,6 @@ class CrossProjectTestModelsValidator(NLPValidator, metaclass=ABCMeta):
 
             f = executor.submit(self.crossProjectJob, testProjName)
             futures_list.append(f)
-            #print(self.crossProjectJob(testProjName))
 
         return futures_list
 

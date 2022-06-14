@@ -25,7 +25,7 @@ class CrossProjectTrainModelsExperiment(Experiment):
 
     def getPomValidator(self):
         return PomCrossProjectTrainModelsValidator(self.project, self.conf)
-        
+
 class CrossProjectTestModelsExperiment(Experiment):
     def getSrcValidator(self):
         return JavaCrossProjectTestModelsValidator(self.project, self.conf)

@@ -21,7 +21,7 @@ def main():
     conf = config.Config(cfile)
 
     maxjobs = conf.get_maxjobs() 
-    exp_class = lookup_class(conf.get_exptype(), conf.get_task())
+    exp_class = lookup_class("lm4bld.experiment.nlp", conf.get_task())
 
     if (maxjobs is None):
         maxjobs = os.cpu_count()

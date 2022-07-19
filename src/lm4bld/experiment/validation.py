@@ -22,6 +22,7 @@ class Validator(metaclass=ABCMeta):
         self.tokenprefix = conf.get_tokenprefix()
         self.tarfile = conf.get_tarfile()
         self.fitclass = fitclass
+        self.filelevel = conf.get_filelevel()
 
         random.seed(666)
 
@@ -70,6 +71,9 @@ class NLPValidator(Validator, metaclass=ABCMeta):
         if flist is None:
             flist = self.load_filenames()
 
+        if self.filelevel:
+            return flist
+
         tarhandle = tarfile.open(self.tarfile, 'r:') if self.tarfile else None
 
         for f in flist:
@@ -82,6 +86,9 @@ class NLPValidator(Validator, metaclass=ABCMeta):
         return sents
 
     def prep_test_data(self, testdata, order):
+        if self.filelevel:
+            return testdata
+
         ngrams = list()
 
         for sent in testdata:
@@ -89,16 +96,6 @@ class NLPValidator(Validator, metaclass=ABCMeta):
             ngrams += list(everygrams(paddedTokens, max_len=order))
 
         return ngrams
-
-class SEValidator(Validator, metaclass=ABCMeta):
-    def load_data(self, flist=None):
-        if flist is None:
-            flist = self.load_filenames()
-
-        return flist
-
-    def prep_test_data(self, testdata, order):
-        return testdata
 
 class CrossFoldValidator(NLPValidator, metaclass=ABCMeta):
     def __init__(self, project, conf, order, listfile, tokenizer, fitclass):

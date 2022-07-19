@@ -29,11 +29,9 @@ class PomModel:
 
         self.addToMap(self.tagmap, location, tagstr)
 
-        if tag.text is None or not tag.text.strip():
-            print("%s/%s" % (location, tagstr))
-        else:
+        if tag.text is not None and tag.text.strip():
             tagcontent = tag.text.strip()
-            print("%s=%s" % (fulltagstr, tagcontent))
+            #print("%s=%s" % (fulltagstr, tagcontent))
             self.addToMap(self.tagvalmap, tagstr, tagcontent)
             self.addToMap(self.tagvallocmap, fulltagstr, tagcontent)
 
@@ -41,7 +39,7 @@ class PomModel:
         for key in tag.attrib:
             keystr = self.removeNamespace(key)
             valstr = self.removeNamespace(tag.attrib[key])
-            print("%s/%s.%s=%s" % (location, tagstr, keystr, valstr))
+            #print("%s/%s.%s=%s" % (location, tagstr, keystr, valstr))
 
             fullattribstr = "%s.%s" % (fulltagstr, keystr)
 

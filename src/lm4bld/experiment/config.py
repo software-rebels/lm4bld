@@ -29,6 +29,7 @@ PROCESS_SOURCE = 'process_source'
 TARFILE = 'tarfile'
 FITPACKAGE = 'fitpackage'
 FITCLASS = 'fitclass'
+FILELEVEL = 'filelevel'
 
 class Config:
     def __init__(self, conf_file):
@@ -113,3 +114,6 @@ class Config:
 
     def get_fitclass(self):
         return self.confdata[FITCLASS]
+
+    def get_filelevel(self):
+        return self.confdata[FILELEVEL]

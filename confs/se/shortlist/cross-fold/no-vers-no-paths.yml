@@ -1,0 +1,74 @@
+################################################################################
+# RQ1 config
+################################################################################
+
+niter: 1 # Number of iterations of N folds
+nfolds: 10 # Number of folds per iteration
+minorder: 1 # The minimum number of grams to explore
+maxorder: 1 # The maximum number of grams to explore
+
+################################################################################
+# Tokenizer config
+################################################################################
+
+prefix: ../data/sources
+tokenprefix: ../data/tokens/no-vers-no-paths
+
+fitpackage: lm4bld.se.pom
+fitclass: PomModel
+filelevel: true
+
+################################################################################
+# Global config
+################################################################################
+
+task: CrossFoldExperiment
+
+process_source: false
+process_poms: true
+
+maxjobs: 24 # Size of the process pool to execute tasks in parallel
+
+pomlistdir: pomlists
+srclistdir: javalists
+
+projects:
+- drill
+- qpid
+- plc4x
+- logging
+- uima
+- asterixdb
+- streams
+- ignite
+- brooklyn
+- dubbo
+- druid
+- hive
+- syncope
+- jclouds
+- zeppelin
+- pulsar
+- archiva
+- manifoldcf
+- felix
+- axis
+- hbase
+- isis
+- ambari
+- directory
+- jackrabbit
+- hadoop
+- royale
+- portals
+- commons
+- james
+- aries
+- flink
+- servicecomb
+- karaf
+- activemq
+- nifi
+- tomee
+- cxf
+- camel

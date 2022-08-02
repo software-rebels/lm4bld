@@ -20,7 +20,7 @@ def main():
     cfile = sys.argv[1] if len(sys.argv) == 2 else None
     conf = config.Config(cfile)
 
-    maxjobs = conf.get_maxjobs() 
+    maxjobs = conf.get_maxjobs()
     exp_class = lookup_class("lm4bld.experiment.nlp", conf.get_task())
 
     if (maxjobs is None):

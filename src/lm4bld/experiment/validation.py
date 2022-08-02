@@ -23,6 +23,7 @@ class Validator(metaclass=ABCMeta):
         self.tarfile = conf.get_tarfile()
         self.fitclass = fitclass
         self.filelevel = conf.get_filelevel()
+        self.fitclassname = conf.get_fitclass()
 
         random.seed(666)
 
@@ -133,6 +134,7 @@ class CrossFoldValidator(NLPValidator, metaclass=ABCMeta):
                                iteration)
 
     def validate(self, executor):
+        print("project,source.type,model.type,metric,order,fold,iteration,value")
         my_futures = list()
 
         for order in range(self.minorder, self.maxorder):
@@ -160,8 +162,8 @@ class PomCrossFoldValidator(CrossFoldValidator):
                                                     conf.get_fitclass()))
 
     def output_str(self, proj, unk_rate, entropy, order, fold, iteration):
-        unkline = f'{proj},pom,unk_rate,{unk_rate},{order},{fold},{iteration}'
-        entline = f'{proj},pom,entropy,{entropy},{order},{fold},{iteration}'
+        unkline = f'{proj},pom,{self.fitclassname},unk_rate,{order},{fold},{iteration},{unk_rate}'
+        entline = f'{proj},pom,{self.fitclassname},entropy,{order},{fold},{iteration},{entropy}'
         return f'{unkline}{os.linesep}{entline}'
 
 class JavaCrossFoldValidator(CrossFoldValidator):
@@ -170,8 +172,8 @@ class JavaCrossFoldValidator(CrossFoldValidator):
                          JavaTokenizer, fitclass)
 
     def output_str(self, proj, unk_rate, entropy, order, fold, iteration):
-        unkline = f'{proj},java,unk_rate,{unk_rate},{order},{fold},{iteration}'
-        entline = f'{proj},java,entropy,{entropy},{order},{fold},{iteration}'
+        unkline = f'{proj},java,{self.fitclassname},unk_rate,{order},{fold},{iteration},{unk_rate}'
+        entline = f'{proj},java,{self.fitclassname},entropy,{order},{fold},{iteration},{entropy}'
         return f'{unkline}{os.linesep}{entline}'
 
 class CrossProjectTrainModelsValidator(NLPValidator, metaclass=ABCMeta):
@@ -263,8 +265,8 @@ class PomCrossProjectTestModelsValidator(CrossProjectTestModelsValidator):
         super().__init__(project, conf, conf.get_pomlist(project), PomTokenizer)
         self.conf = conf
 
-    def output_str(self, train_proj, test_proj, unk_rate, entropy): 
-        return f'{train_proj},{test_proj},pom,{unk_rate},{entropy}'
+    def output_str(self, train_proj, test_proj, unk_rate, entropy):
+        return f'{train_proj},{test_proj},pom,{self.fitclassname},{unk_rate},{entropy}'
 
     def get_validator(self, projname):
         return PomCrossProjectTestModelsValidator(projname, self.conf)
@@ -278,8 +280,8 @@ class JavaCrossProjectTestModelsValidator(CrossProjectTestModelsValidator):
                          JavaTokenizer)
         self.conf = conf
 
-    def output_str(self, train_proj, test_proj, unk_rate, entropy): 
-        return f'{train_proj},{test_proj},java,{unk_rate},{entropy}'
+    def output_str(self, train_proj, test_proj, unk_rate, entropy):
+        return f'{train_proj},{test_proj},java,{self.fitclassname},{unk_rate},{entropy}'
 
     def get_validator(self, projname):
         return JavaCrossProjectTestModelsValidator(projname, self.conf)

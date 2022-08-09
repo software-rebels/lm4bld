@@ -1,7 +1,6 @@
 ################################################################################
 # RQ1 config
-################################################################################
-
+################################################################################ 
 niter: 1 # Number of iterations of N folds
 nfolds: 10 # Number of folds per iteration
 minorder: 1 # The minimum number of grams to explore
@@ -28,25 +27,25 @@ test_ratio_threshold: 0.5
 # Tokenizer config
 ################################################################################
 
-normalize_version_strings: false
-normalize_paths: false
+normalize_version_strings: true
+normalize_paths: true
 prefix: ../data/sources
-tokenprefix: ../data/tokens/no-vers-no-paths
+tokenprefix: ../data/tokens/vers-paths
 
 ################################################################################
 # Global config
 ################################################################################
 
-task: CrossFoldExperiment # Valid settings: CrossFoldExperiment, CrossProjectExperiment, NextTokenExperiment, TokenizeExperiment
-#fitpackage: lm4bld.nlp.model
-#fitclass: NGramModel
-fitpackage: lm4bld.se.pom
-fitclass: PomModel
+task: CrossFoldExperiment # Valid settings: CrossFoldExperiment, CrossProjectExperiment, NextTokenExperiment, TokenizeExperiment, LocExperiment 
+fitpackage: lm4bld.models.nl
+fitclass: NGramModel
+filelevel: false
+ignoresyntax: false
 
-process_source: true 
+process_source: false
 process_poms: true
 
-maxjobs: 24 # Size of the process pool to execute tasks in parallel
+maxjobs: 1 # Size of the process pool to execute tasks in parallel
 
 pomlistdir: pomlists
 srclistdir: javalists

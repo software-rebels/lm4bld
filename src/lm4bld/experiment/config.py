@@ -30,6 +30,7 @@ TARFILE = 'tarfile'
 FITPACKAGE = 'fitpackage'
 FITCLASS = 'fitclass'
 FILELEVEL = 'filelevel'
+IGNORESYNTAX = 'ignoresyntax'
 
 class Config:
     def __init__(self, conf_file):
@@ -117,3 +118,6 @@ class Config:
 
     def get_filelevel(self):
         return self.confdata[FILELEVEL]
+
+    def get_ignoresyntax(self):
+        return self.confdata[IGNORESYNTAX]

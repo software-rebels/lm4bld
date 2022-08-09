@@ -6,10 +6,11 @@ from nltk.lm.preprocessing import padded_everygram_pipeline
 from nltk.lm.vocabulary import Vocabulary
 
 class NGramModel:
-    def __init__(self, order):
+    def __init__(self, order, ignore_syntax):
         self.order = order
         self.model = Lidstone(0.00017, self.order)
         empty_vocab = Vocabulary(unk_cutoff=1)
+        self.ignore_syntax = ignore_syntax
 
     def fit(self, train_sents):
         train_corp, vocab = padded_everygram_pipeline(self.order, train_sents)

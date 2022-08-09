@@ -15,7 +15,7 @@ class CType(Enum):
     ATTRVALLOC=auto()
 
 class PomModel:
-    def __init__(self, order):
+    def __init__(self, order, ignore_syntax):
         self.vocab = set()
         self.tagmap = {}
         self.tagvalmap = {}
@@ -27,6 +27,7 @@ class PomModel:
         self.order = order
         self.gamma = 0.00017
         self.grams = None
+        self.ignore_syntax = ignore_syntax
 
     def removeNamespace(self, s):
         NS_END = "}"
@@ -140,7 +141,6 @@ class PomModel:
             self.buildGramsFromTag(etree, child, location)
 
     def logscore(self, context, term, ctype):
-        # Lookup context
         mymap = self.getMapByType(ctype)
         freq = 0
         n = 0
@@ -156,13 +156,10 @@ class PomModel:
 
     def calcEntropy(self, grams):
         sumScore = 0
-        count = 0
         for gram in grams:
             gramScore = self.logscore(gram[0], gram[1], gram[2])
             if (gramScore is not None):
                 sumScore += gramScore
-            else:
-                count += 1
 
         return -1 * (sumScore / len(grams))
 
@@ -170,28 +167,59 @@ class PomModel:
         grams = self.buildGrams(flist)
         return self.calcEntropy(grams)
 
-    def is_unk(self, context, term, ctype):
+    def unk_tokens(self, context, term, ctype):
         mymap = self.getMapByType(ctype)
 
-        rtn = True
+        rtn = 1
         if (context in mymap):
             hist = Counter(mymap[context])
             if (term in hist):
-                rtn = False
+                rtn = 0
 
-        return rtn
+        return [rtn, 1]
 
     def calcUnkRate(self, grams):
         count = 0
-        for gram in grams:
-            if (self.is_unk(gram[0], gram[1], gram[2])):
-                count += 1
+        total = 0
 
-        return count / len(grams)
+        for gram in grams:
+            unk_count, tok_count = self.unk_tokens(gram[0], gram[1], gram[2])
+            count += unk_count
+            total += tok_count
+
+        return count / total
 
     def unkRate(self, flist):
         grams = self.buildGrams(flist)
         return self.calcUnkRate(grams)
+
+class AblatePayloadPomModel(PomModel):
+    def logscore(self, context, term, ctype):
+        return None if (ctype is CType.TAGCONTENT or ctype is CType.TAGCONTENTLOC) else super().logscore(context, term, ctype)
+
+    def unk_tokens(self, context, term, ctype):
+        return [0, 0] if (ctype is CType.TAGCONTENT or ctype is CType.TAGCONTENTLOC) else super().unk_tokens(context, term, ctype)
+
+class AblateAttrKeyPomModel(PomModel):
+    def logscore(self, context, term, ctype):
+        return None if (ctype is CType.ATTRKEY or ctype is CType.ATTRKEYLOC) else super().logscore(context, term, ctype)
+
+    def unk_tokens(self, context, term, ctype):
+        return [0, 0] if (ctype is CType.ATTRKEY or ctype is CType.ATTRKEYLOC) else super().unk_tokens(context, term, ctype)
+
+class AblateAttrValPomModel(PomModel):
+    def logscore(self, context, term, ctype):
+        return None if (ctype is CType.ATTRVAL or ctype is CType.ATTRVALLOC) else super().logscore(context, term, ctype)
+
+    def unk_tokens(self, context, term, ctype):
+        return [0, 0] if (ctype is CType.ATTRVAL or ctype is CType.ATTRVALLOC) else super().unk_tokens(context, term, ctype)
+
+class AblateTagPomModel(PomModel):
+    def logscore(self, context, term, ctype):
+        return None if (ctype is CType.TAG) else super().logscore(context, term, ctype)
+
+    def unk_tokens(self, context, term, ctype):
+        return [0, 0] if (ctype is CType.TAG) else super().unk_tokens(context, term, ctype)
 
 class PomParse:
     def __init__(self, filename, model=None):
@@ -199,7 +227,7 @@ class PomParse:
         self.root = self.etree.getroot()
 
         if model is None:
-            self.model = PomModel(-1)
+            self.model = PomModel(None)
         else:
             self.model = model
 

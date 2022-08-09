@@ -8,9 +8,9 @@ import tarfile
 from nltk.lm.preprocessing import pad_both_ends
 from nltk.util import everygrams
 
-from lm4bld.nlp.model import NGramModel
-from lm4bld.nlp.tokenize import JavaTokenizer
-from lm4bld.nlp.tokenize import PomTokenizer
+from lm4bld.models.nl import NGramModel
+from lm4bld.models.tokenize import JavaTokenizer
+from lm4bld.models.tokenize import PomTokenizer
 
 class Validator(metaclass=ABCMeta):
     def __init__(self, project, conf, order, listfile, tokenizer, fitclass):
@@ -24,6 +24,7 @@ class Validator(metaclass=ABCMeta):
         self.fitclass = fitclass
         self.filelevel = conf.get_filelevel()
         self.fitclassname = conf.get_fitclass()
+        self.ignore_syntax = conf.get_ignoresyntax()
 
         random.seed(666)
 
@@ -41,7 +42,7 @@ class Validator(metaclass=ABCMeta):
         return flist
 
     def trainModel(self, trainCorpus, order):
-        fitter = self.fitclass(order)
+        fitter = self.fitclass(order, self.ignore_syntax)
         fitter.fit(trainCorpus)
 
         return fitter
@@ -78,7 +79,8 @@ class NLPValidator(Validator, metaclass=ABCMeta):
         tarhandle = tarfile.open(self.tarfile, 'r:') if self.tarfile else None
 
         for f in flist:
-            t = self.tokenizer(f, self.prefix, self.tokenprefix)
+            t = self.tokenizer(f, self.prefix, self.tokenprefix,
+                               self.ignore_syntax)
             sents += t.load_tokens(tarhandle)
 
         if tarhandle:
@@ -134,7 +136,6 @@ class CrossFoldValidator(NLPValidator, metaclass=ABCMeta):
                                iteration)
 
     def validate(self, executor):
-        print("project,source.type,model.type,metric,order,fold,iteration,value")
         my_futures = list()
 
         for order in range(self.minorder, self.maxorder):
@@ -398,7 +399,7 @@ class TokenizeValidator(NLPValidator, metaclass=ABCMeta):
         for file in lines:
             fname = file.strip()
             t = self.tokenizer(fname, self.prefix, self.tokenprefix,
-                               self.versions, self.paths)
+                               self.ignore_syntax, self.versions, self.paths)
             f = executor.submit(t.sentence_tokenize)
             futures_list.append(f)
 

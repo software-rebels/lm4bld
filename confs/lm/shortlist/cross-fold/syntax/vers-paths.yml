@@ -22,6 +22,7 @@ task: CrossFoldExperiment
 
 process_source: true
 process_poms: true
+ignoresyntax: false
 
 maxjobs: 4 # Size of the process pool to execute tasks in parallel
 

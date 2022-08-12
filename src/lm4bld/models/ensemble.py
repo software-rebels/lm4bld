@@ -8,8 +8,8 @@ from lm4bld.models.tokenize import PomTokenizer
 
 class EnsembleModel(PomModel):
     def __init__(self, order, ignore_syntax):
-        super().__init__(order)
-        self.lm = NGramModel(order)
+        super().__init__(order, ignore_syntax)
+        self.lm = NGramModel(order, ignore_syntax)
         self.tokenizer = PomTokenizer(None, None, None, True, True)
         self.ignore_syntax = ignore_syntax
 

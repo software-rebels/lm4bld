@@ -4,7 +4,7 @@
 niter: 1 # Number of iterations of N folds
 nfolds: 10 # Number of folds per iteration
 minorder: 1 # The minimum number of grams to explore
-maxorder: 1 # The maximum number of grams to explore
+maxorder: 10 # The maximum number of grams to explore
 
 ################################################################################
 # RQ2 config
@@ -37,10 +37,10 @@ tokenprefix: ../data/tokens/vers-paths
 ################################################################################
 
 task: CrossFoldExperiment # Valid settings: CrossFoldExperiment, CrossProjectExperiment, NextTokenExperiment, TokenizeExperiment, LocExperiment 
-fitpackage: lm4bld.models.nl
-fitclass: NGramModel
-filelevel: false
-ignoresyntax: false
+fitpackage: lm4bld.models.ensemble
+fitclass: EnsembleModel
+filelevel: true
+ignoresyntax: true
 
 process_source: false
 process_poms: true

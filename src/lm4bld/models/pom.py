@@ -16,6 +16,7 @@ class CType(Enum):
 
 class PomMap:
     def __init__(self):
+        self.gamma = 0.00017
         self.map = {}
         self.vocab = set()
 
@@ -29,20 +30,21 @@ class PomMap:
         self.map[filename][CType.ATTRVAL] = {}
         self.map[filename][CType.ATTRVALLOC] = {}
 
-    def add(self, filename, mtype, key, value):
+    def add(self, filename, ctype, key, value):
         if filename not in self.map:
             self.initMapLayer(filename)
 
-        if key not in self.map[filename][mtype]:
-            self.map[filename][mtype][mtype] = [] 
+        if key not in self.map[filename][ctype]:
+            self.map[filename][ctype][key] = []
 
-        self.map[filename][mtype][key].append(value)
+        self.map[filename][ctype][key].append(value)
         self.vocab.add(value)
 
     def most_common(self, ctype, context):
         myHist = Counter()
         for fmap in self.map:
-            myHist += Counter(fmap[ctype][context])
+            mymap = self.map[fmap]
+            myHist += Counter(mymap[ctype][context])
 
         return myHist.most_common()
 
@@ -51,10 +53,11 @@ class PomMap:
         n = 0
 
         for fmap in self.map:
-            if (context in fmap[ctype]):
+            mymap = self.map[fmap]
+            if (context in mymap[ctype]):
                 n += 1
 
-                if (term in fmap[ctype][context]):
+                if (term in mymap[ctype][context]):
                     freq += 1
 
         return log2((freq + self.gamma) / (n + len(self.vocab)*self.gamma))
@@ -63,7 +66,8 @@ class PomMap:
         rtn = 1
 
         for fmap in self.map:
-            if (context in fmap[ctype] and term in fmap[ctype][context]):
+            mymap = self.map[fmap]
+            if (context in mymap[ctype] and term in mymap[ctype][context]):
                 rtn = 0
                 break
 
@@ -72,7 +76,6 @@ class PomMap:
 class PomModel:
     def __init__(self, order, ignore_syntax):
         self.order = order
-        self.gamma = 0.00017
         self.grams = None
         self.ignore_syntax = ignore_syntax
         self.map = PomMap()

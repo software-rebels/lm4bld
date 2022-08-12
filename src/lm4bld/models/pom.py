@@ -14,44 +14,85 @@ class CType(Enum):
     ATTRVAL=auto()
     ATTRVALLOC=auto()
 
+class PomMap:
+    def __init__(self):
+        self.map = {}
+        self.vocab = set()
+
+    def initMapLayer(self, filename):
+        self.map[filename] = {}
+        self.map[filename][CType.TAG] = {}
+        self.map[filename][CType.TAGCONTENT] = {}
+        self.map[filename][CType.TAGCONTENTLOC] = {}
+        self.map[filename][CType.ATTRKEY] = {}
+        self.map[filename][CType.ATTRKEYLOC] = {}
+        self.map[filename][CType.ATTRVAL] = {}
+        self.map[filename][CType.ATTRVALLOC] = {}
+
+    def add(self, filename, mtype, key, value):
+        if filename not in self.map:
+            self.initMapLayer(filename)
+
+        if key not in self.map[filename][mtype]:
+            self.map[filename][mtype][mtype] = [] 
+
+        self.map[filename][mtype][key].append(value)
+        self.vocab.add(value)
+
+    def most_common(self, ctype, context):
+        myHist = Counter()
+        for fmap in self.map:
+            myHist += Counter(fmap[ctype][context])
+
+        return myHist.most_common()
+
+    def logscore(self, ctype, context, term):
+        freq = 0
+        n = 0
+
+        for fmap in self.map:
+            if (context in fmap[ctype]):
+                n += 1
+
+                if (term in fmap[ctype][context]):
+                    freq += 1
+
+        return log2((freq + self.gamma) / (n + len(self.vocab)*self.gamma))
+
+    def unk_tokens(self, ctype, context, term):
+        rtn = 1
+
+        for fmap in self.map:
+            if (context in fmap[ctype] and term in fmap[ctype][context]):
+                rtn = 0
+                break
+
+        return [rtn, 1]
+
 class PomModel:
     def __init__(self, order, ignore_syntax):
-        self.vocab = set()
-        self.tagmap = {}
-        self.tagvalmap = {}
-        self.tagvallocmap = {}
-        self.attribmap = {}
-        self.attriblocmap = {}
-        self.attribvalmap = {}
-        self.attribvallocmap = {}
         self.order = order
         self.gamma = 0.00017
         self.grams = None
         self.ignore_syntax = ignore_syntax
+        self.map = PomMap()
 
     def removeNamespace(self, s):
         NS_END = "}"
         spl = s.split(NS_END, 1)
         return spl[-1]
 
-    def addToMap(self, mymap, key, value):
-        if key not in mymap:
-            mymap[key] = []
-
-        mymap[key].append(value)
-        self.vocab.add(value)
-
-    def processTag(self, tag, location):
+    def processTag(self, filename, tag, location):
         tagstr = self.removeNamespace(tag.tag)
         fulltagstr = "%s/%s" % (location, tagstr)
 
-        self.addToMap(self.tagmap, location, tagstr)
+        self.map.add(filename, CType.TAG, location, tagstr)
 
         if tag.text is not None and tag.text.strip():
             tagcontent = tag.text.strip()
             #print("%s=%s" % (fulltagstr, tagcontent))
-            self.addToMap(self.tagvalmap, tagstr, tagcontent)
-            self.addToMap(self.tagvallocmap, fulltagstr, tagcontent)
+            self.map.add(filename, CType.TAGCONTENT, tagstr, tagcontent)
+            self.map.add(filename, CType.TAGCONTENTLOC, fulltagstr, tagcontent)
 
         # If we have some attribs
         for key in tag.attrib:
@@ -61,37 +102,13 @@ class PomModel:
 
             fullattribstr = "%s.%s" % (fulltagstr, keystr)
 
-            self.addToMap(self.attribmap, tagstr, keystr)
-            self.addToMap(self.attriblocmap, fulltagstr, keystr)
-            self.addToMap(self.attribvalmap, keystr, valstr)
-            self.addToMap(self.attribvallocmap, fullattribstr, valstr)
-
-    def getMapByType(self, ctype):
-        mymap = None
-        match ctype:
-            case CType.TAG:
-                mymap = self.tagmap
-            case CType.TAGCONTENT:
-                mymap = self.tagvalmap
-            case CType.TAGCONTENTLOC:
-                mymap = self.tagvallocmap
-            case CType.ATTRKEY:
-                mymap = self.attribmap
-            case CType.ATTRKEYLOC:
-                mymap = self.attriblocmap
-            case CType.ATTRVAL:
-                mymap = self.attribvalmap
-            case CType.ATTRVALLOC:
-                mymap = self.attribvallocmap
-
-        return mymap
+            self.map.add(filename, CType.ATTRKEY, tagstr, keystr)
+            self.map.add(filename, CType.ATTRKEYLOC, fulltagstr, keystr)
+            self.map.add(filename, CType.ATTRVAL, keystr, valstr)
+            self.map.add(filename, CType.ATTRVALLOC, fullattribstr, valstr)
 
     def guessNext(self, context=".", ctype=CType.TAG):
-        mymap = getMapByType(ctype)
-
-        hist = Counter(mymap[context])
-
-        return hist.most_common()
+        return self.map.most_common(context, ctype) 
 
     def print(self):
         print(self.tagmap)
@@ -118,41 +135,30 @@ class PomModel:
             tag = etree.getroot()
 
         # process tag
-        self.grams.append([location, self.removeNamespace(tag.tag), CType.TAG])
+        self.grams.append([CType.TAG, location, self.removeNamespace(tag.tag)])
 
         # process tag content
         if tag.text is not None and tag.text.strip():
             tagcontent = tag.text.strip()
-            self.grams.append([location, tagcontent, CType.TAGCONTENTLOC])
+            self.grams.append([CType.TAGCONTENTLOC, location, tagcontent])
 
         for key in tag.attrib:
             # process attrib keys
             keystr = self.removeNamespace(key)
-            self.grams.append([location, keystr, CType.ATTRKEYLOC])
+            self.grams.append([CType.ATTRKEYLOC, location, keystr])
 
             # process attrib vals
             fullattribstr = "%s.%s" % (location, keystr)
             valstr = self.removeNamespace(tag.attrib[key])
-            self.grams.append([fullattribstr, valstr, CType.ATTRVALLOC])
+            self.grams.append([CType.ATTRVALLOC, fullattribstr, valstr])
 
         location = "%s/%s" % (location, self.removeNamespace(tag.tag))
 
         for child in tag:
             self.buildGramsFromTag(etree, child, location)
 
-    def logscore(self, context, term, ctype):
-        mymap = self.getMapByType(ctype)
-        freq = 0
-        n = 0
-
-        if (context in mymap):
-            hist = Counter(mymap[context])
-            n = hist.total()
-
-            if (term in hist):
-                freq = hist[term]
-
-        return log2((freq + self.gamma) / (n + len(self.vocab)*self.gamma))
+    def logscore(self, ctype, context, term):
+        return self.map.logscore(ctype, context, term)
 
     def calcEntropy(self, grams):
         sumScore = 0
@@ -167,16 +173,8 @@ class PomModel:
         grams = self.buildGrams(flist)
         return self.calcEntropy(grams)
 
-    def unk_tokens(self, context, term, ctype):
-        mymap = self.getMapByType(ctype)
-
-        rtn = 1
-        if (context in mymap):
-            hist = Counter(mymap[context])
-            if (term in hist):
-                rtn = 0
-
-        return [rtn, 1]
+    def unk_tokens(self, ctype, context, term):
+        return self.map.unk_tokens(ctype, context, term)
 
     def calcUnkRate(self, grams):
         count = 0
@@ -194,35 +192,36 @@ class PomModel:
         return self.calcUnkRate(grams)
 
 class AblatePayloadPomModel(PomModel):
-    def logscore(self, context, term, ctype):
-        return None if (ctype is CType.TAGCONTENT or ctype is CType.TAGCONTENTLOC) else super().logscore(context, term, ctype)
+    def logscore(self, ctype, context, term):
+        return None if (ctype is CType.TAGCONTENT or ctype is CType.TAGCONTENTLOC) else super().logscore(ctype, context, term)
 
-    def unk_tokens(self, context, term, ctype):
-        return [0, 0] if (ctype is CType.TAGCONTENT or ctype is CType.TAGCONTENTLOC) else super().unk_tokens(context, term, ctype)
+    def unk_tokens(self, ctype, context, term):
+        return [0, 0] if (ctype is CType.TAGCONTENT or ctype is CType.TAGCONTENTLOC) else super().unk_tokens(ctype, context, term)
 
 class AblateAttrKeyPomModel(PomModel):
-    def logscore(self, context, term, ctype):
-        return None if (ctype is CType.ATTRKEY or ctype is CType.ATTRKEYLOC) else super().logscore(context, term, ctype)
+    def logscore(self, ctype, context, term):
+        return None if (ctype is CType.ATTRKEY or ctype is CType.ATTRKEYLOC) else super().logscore(ctype, context, term)
 
-    def unk_tokens(self, context, term, ctype):
-        return [0, 0] if (ctype is CType.ATTRKEY or ctype is CType.ATTRKEYLOC) else super().unk_tokens(context, term, ctype)
+    def unk_tokens(self, ctype, context, term):
+        return [0, 0] if (ctype is CType.ATTRKEY or ctype is CType.ATTRKEYLOC) else super().unk_tokens(ctype, context, term)
 
 class AblateAttrValPomModel(PomModel):
-    def logscore(self, context, term, ctype):
-        return None if (ctype is CType.ATTRVAL or ctype is CType.ATTRVALLOC) else super().logscore(context, term, ctype)
+    def logscore(self, ctype, context, term):
+        return None if (ctype is CType.ATTRVAL or ctype is CType.ATTRVALLOC) else super().logscore(ctype, context, term)
 
-    def unk_tokens(self, context, term, ctype):
-        return [0, 0] if (ctype is CType.ATTRVAL or ctype is CType.ATTRVALLOC) else super().unk_tokens(context, term, ctype)
+    def unk_tokens(self, ctype, context, term):
+        return [0, 0] if (ctype is CType.ATTRVAL or ctype is CType.ATTRVALLOC) else super().unk_tokens(ctype, context, term)
 
 class AblateTagPomModel(PomModel):
-    def logscore(self, context, term, ctype):
-        return None if (ctype is CType.TAG) else super().logscore(context, term, ctype)
+    def logscore(self, ctype, context, term):
+        return None if (ctype is CType.TAG) else super().logscore(ctype, context, term)
 
-    def unk_tokens(self, context, term, ctype):
-        return [0, 0] if (ctype is CType.TAG) else super().unk_tokens(context, term, ctype)
+    def unk_tokens(self, ctype, context, term):
+        return [0, 0] if (ctype is CType.TAG) else super().unk_tokens(ctype, context, term)
 
 class PomParse:
     def __init__(self, filename, model=None):
+        self.filename = filename
         self.etree = ElementTree.parse(filename)
         self.root = self.etree.getroot()
 
@@ -235,7 +234,7 @@ class PomParse:
         if tag is None:
             tag = self.root
 
-        self.model.processTag(tag, location)
+        self.model.processTag(self.filename, tag, location)
 
         location = "%s/%s" % (location, self.model.removeNamespace(tag.tag))
 

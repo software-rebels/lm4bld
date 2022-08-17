@@ -10,17 +10,17 @@ class EnsembleModel(PomModel):
     def __init__(self, order, ignore_syntax):
         super().__init__(order, ignore_syntax)
         self.lm = NGramModel(order, ignore_syntax)
-        self.tokenizer = PomTokenizer(None, None, None, True, True)
+        self.tokenizer = PomTokenizer(None, None, None, ignore_syntax, True, True)
         self.ignore_syntax = ignore_syntax
 
     def get_sents(self, flist):
         sents = list()
 
         for f in flist:
-            t = PomTokenizer(f, None, None, True, True)
+            t = PomTokenizer(f, None, None, self.ignore_syntax, True, True)
             sents += t.tokens_to_sents()
 
-        return sents
+        return t.remove_syntax(sents) if self.ignore_syntax else sents
 
     def fit(self, flist):
         super().fit(flist)
@@ -29,46 +29,43 @@ class EnsembleModel(PomModel):
     def grammify(self, term):
         preprocessed_term = self.tokenizer.preprocess_strings(term)
         tokens = self.tokenizer.tokenize_string(preprocessed_term)
-        clean_tokens = self.tokenizer.remove_syntax(tokens) if (self.ignore_syntax) else tokens
+        clean_tokens = tokens
+
+        if (self.ignore_syntax):
+            to_clean = list()
+            to_clean.append(tokens)
+            clean_tokens = self.tokenizer.remove_syntax(to_clean)[0]
+
         padded_tokens = list(pad_both_ends(clean_tokens, n=self.order))
         return list(everygrams(padded_tokens, max_len=self.order))
 
-    def payloadGramscore(self, context, term):
+    def payloadGramscore(self, term):
         gramScore = 0
         ngrams = self.grammify(term)
 
         # Ripped from nltk.lm.api
         for ngram in ngrams:
-            gramScore += self.lm.model.logscore(ngram[-1], ngram[:-1])
+            score = self.lm.model.logscore(ngram[-1], ngram[:-1])
+            gramScore += score
 
-        return gramScore/len(ngrams) if len(ngrams) > 0 else 0
+        return gramScore/len(ngrams) if len(ngrams) > 0 else None
 
-    def logscore(self, context, term, ctype):
-        gramScore = None
+    def logscore(self, ctype, context, term):
+        return self.payloadGramscore(term) if (ctype is CType.TAGCONTENTLOC or ctype is CType.TAGCONTENT) else super().logscore(ctype, context, term)
 
-        match ctype:
-            case CType.TAGCONTENTLOC:
-                gramScore = self.payloadGramscore(context, term)
-            case _:
-                gramScore = super().logscore(context, term, ctype)
-
-        return gramScore
-
-    def unk_tokens(self, context, term, ctype):
+    def unk_tokens(self, ctype, context, term):
         rtn = None
 
-        match ctype:
-            case CType.TAGCONTENTLOC:
-                ngrams = self.grammify(term)
-                unk_count = 0
+        if (ctype is CType.TAGCONTENTLOC or ctype is CType.TAGCONTENT):
+            ngrams = self.grammify(term)
+            unk_count = 0
+            for gram in ngrams:
+                gram_or_unk = self.lm.model.vocab.lookup(gram)
+                if (gram_or_unk[0] == "<UNK>"):
+                    unk_count += 1
 
-                for gram in ngrams:
-                    gram_or_unk = self.lm.model.vocab.lookup(gram)
-                    if (gram_or_unk[0] == "<UNK>"):
-                        unk_count += 1
-
-                rtn = [unk_count, len(ngrams)]
-            case _:
-                rtn = super().unk_tokens(context, term, ctype)
+            rtn = [unk_count, len(ngrams)]
+        else:
+            rtn = super().unk_tokens(ctype, context, term)
 
         return rtn

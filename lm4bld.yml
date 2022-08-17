@@ -3,7 +3,7 @@
 ################################################################################ 
 niter: 1 # Number of iterations of N folds
 nfolds: 10 # Number of folds per iteration
-minorder: 1 # The minimum number of grams to explore
+minorder: 10 # The minimum number of grams to explore
 maxorder: 10 # The maximum number of grams to explore
 
 ################################################################################
@@ -51,4 +51,4 @@ pomlistdir: pomlists
 srclistdir: javalists
 
 projects:
-- accumulo
+- activemq

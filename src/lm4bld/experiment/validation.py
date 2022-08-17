@@ -39,15 +39,27 @@ class Validator(metaclass=ABCMeta):
         fhandle.close()
         return flist
 
+    # Duplicated in NGramModel
+    def load_sents(self, flist):
+        sents = list()
+
+        for f in flist:
+            t = self.tokenizer(f, self.prefix, self.tokenprefix,
+                               self.ignore_syntax)
+            sents += t.load_tokens()
+
+        return sents
+
     def trainModel(self, trainCorpus, order):
-        fitter = self.fitclass(order, self.ignore_syntax)
-        fitter.fit(trainCorpus)
+        fitter = self.fitclass(order, self.tokenizer, self.prefix,
+                               self.tokenprefix, self.ignore_syntax)
+        fitter.fit(trainCorpus, self.filelevel)
 
         return fitter
 
-    def testModel(self, fitter, testdata, order):
-        preppedData = self.prep_test_data(testdata, order)
-        return fitter.unkRate(preppedData), fitter.crossEntropy(preppedData)
+    def testModel(self, fitter, testCorpus, order):
+        preppedData = self.prep_test_data(testCorpus, order)
+        return fitter.unkRate(preppedData, self.filelevel), fitter.crossEntropy(preppedData, self.filelevel)
 
     def getProject(self):
         return self.project
@@ -66,28 +78,25 @@ class Validator(metaclass=ABCMeta):
 
 class NLPValidator(Validator, metaclass=ABCMeta):
     def load_data(self, flist=None):
-        sents = list()
-
         if flist is None:
             flist = self.load_filenames()
 
         if self.filelevel:
             return flist
 
-        for f in flist:
-            t = self.tokenizer(f, self.prefix, self.tokenprefix,
-                               self.ignore_syntax)
-            sents += t.load_tokens()
-
-        return sents
+        return self.load_sents(flist)
 
     def prep_test_data(self, testdata, order):
         if self.filelevel:
             return testdata
 
+        return self.grammify(testdata, order)
+
+    # Duplicated in NGramModel
+    def grammify(self, test_sents, order):
         ngrams = list()
 
-        for sent in testdata:
+        for sent in test_sents:
             paddedTokens = list(pad_both_ends(sent, n=order))
             ngrams += list(everygrams(paddedTokens, max_len=order))
 

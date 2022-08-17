@@ -5,6 +5,8 @@ from enum import Enum, auto
 from math import log2
 import re
 
+from lm4bld.models.api import Model
+
 class CType(Enum):
     TAG=auto()
     TAGCONTENT=auto()
@@ -73,11 +75,10 @@ class PomMap:
 
         return [rtn, 1]
 
-class PomModel:
-    def __init__(self, order, ignore_syntax):
-        self.order = order
+class PomModel(Model):
+    def __init__(self, order, tokenizer, prefix, tokenprefix, ignore_syntax):
+        super().__init__(order, tokenizer, prefix, tokenprefix, ignore_syntax)
         self.grams = None
-        self.ignore_syntax = ignore_syntax
         self.map = PomMap()
 
     def removeNamespace(self, s):
@@ -116,7 +117,7 @@ class PomModel:
     def print(self):
         print(self.tagmap)
 
-    def fit(self, flist):
+    def fit(self, flist, filelevel):
         for f in flist:
             pp = PomParse(f, self)
             pp.flatten()
@@ -163,7 +164,7 @@ class PomModel:
     def logscore(self, ctype, context, term):
         return self.map.logscore(ctype, context, term)
 
-    def crossEntropy(self, flist):
+    def crossEntropy(self, flist, filelevel):
         grams = self.buildGrams(flist)
         sumScore = 0
 
@@ -177,7 +178,7 @@ class PomModel:
     def unk_tokens(self, ctype, context, term):
         return self.map.unk_tokens(ctype, context, term)
 
-    def unkRate(self, flist):
+    def unkRate(self, flist, filelevel):
         grams = self.buildGrams(flist)
         count = 0
         total = 0

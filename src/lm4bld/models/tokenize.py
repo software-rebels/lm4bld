@@ -107,7 +107,9 @@ class AbstractTokenizer(metaclass=ABCMeta):
 
     def load_tokens(self):
         tokenfile = self.get_token_file()
+        token_handle = open(tokenfile, 'r', encoding="ISO-8859-1")
         tokens = json.load(token_handle)
+        token_handle.close()
 
         return self.remove_syntax(tokens) if (self.ignore_syntax) else tokens
 

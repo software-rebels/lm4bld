@@ -1,30 +1,22 @@
 from nltk.lm.preprocessing import pad_both_ends
 from nltk.util import everygrams
 
+from lm4bld.models.api import Model
 from lm4bld.models.nl import NGramModel
 from lm4bld.models.pom import CType
 from lm4bld.models.pom import PomModel
 from lm4bld.models.tokenize import PomTokenizer
 
 class EnsembleModel(PomModel):
-    def __init__(self, order, ignore_syntax):
-        super().__init__(order, ignore_syntax)
-        self.lm = NGramModel(order, ignore_syntax)
-        self.tokenizer = PomTokenizer(None, None, None, ignore_syntax, True, True)
-        self.ignore_syntax = ignore_syntax
+    def __init__(self, order, tokenizer, prefix, tokenprefix, ignore_syntax):
+        super().__init__(order, tokenizer, prefix, tokenprefix, ignore_syntax)
+        self.lm = NGramModel(order, tokenizer, prefix, tokenprefix, ignore_syntax)
+        self.tokenizer = tokenizer(None, prefix, tokenprefix, ignore_syntax, True, True)
 
-    def get_sents(self, flist):
-        sents = list()
 
-        for f in flist:
-            t = PomTokenizer(f, None, None, self.ignore_syntax, True, True)
-            sents += t.tokens_to_sents()
-
-        return t.remove_syntax(sents) if self.ignore_syntax else sents
-
-    def fit(self, flist):
-        super().fit(flist)
-        self.lm.fit(self.get_sents(flist))
+    def fit(self, flist, filelevel):
+        super().fit(flist, filelevel)
+        self.lm.fit(flist, filelevel)
 
     def grammify(self, term):
         preprocessed_term = self.tokenizer.preprocess_strings(term)
@@ -42,6 +34,7 @@ class EnsembleModel(PomModel):
     def payloadGramscore(self, term):
         gramScore = 0
         ngrams = self.grammify(term)
+        print(ngrams)
 
         # Ripped from nltk.lm.api
         for ngram in ngrams:

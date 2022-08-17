@@ -111,7 +111,7 @@ class PomModel:
             self.map.add(filename, CType.ATTRVALLOC, fullattribstr, valstr)
 
     def guessNext(self, context=".", ctype=CType.TAG):
-        return self.map.most_common(context, ctype) 
+        return self.map.most_common(context, ctype)
 
     def print(self):
         print(self.tagmap)
@@ -163,8 +163,10 @@ class PomModel:
     def logscore(self, ctype, context, term):
         return self.map.logscore(ctype, context, term)
 
-    def calcEntropy(self, grams):
+    def crossEntropy(self, flist):
+        grams = self.buildGrams(flist)
         sumScore = 0
+
         for gram in grams:
             gramScore = self.logscore(gram[0], gram[1], gram[2])
             if (gramScore is not None):
@@ -172,14 +174,11 @@ class PomModel:
 
         return -1 * (sumScore / len(grams))
 
-    def crossEntropy(self, flist):
-        grams = self.buildGrams(flist)
-        return self.calcEntropy(grams)
-
     def unk_tokens(self, ctype, context, term):
         return self.map.unk_tokens(ctype, context, term)
 
-    def calcUnkRate(self, grams):
+    def unkRate(self, flist):
+        grams = self.buildGrams(flist)
         count = 0
         total = 0
 
@@ -189,10 +188,6 @@ class PomModel:
             total += tok_count
 
         return count / total
-
-    def unkRate(self, flist):
-        grams = self.buildGrams(flist)
-        return self.calcUnkRate(grams)
 
 class AblatePayloadPomModel(PomModel):
     def logscore(self, ctype, context, term):

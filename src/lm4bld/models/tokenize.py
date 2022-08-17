@@ -105,11 +105,9 @@ class AbstractTokenizer(metaclass=ABCMeta):
     def is_syntax(self, tokens):
         raise NotImplementedError()
 
-    def load_tokens(self, tarhandle):
+    def load_tokens(self):
         tokenfile = self.get_token_file()
-        token_handle = tarhandle.extractfile(tokenfile) if tarhandle else open(tokenfile, 'r', encoding="ISO-8859-1")
         tokens = json.load(token_handle)
-        token_handle.close()
 
         return self.remove_syntax(tokens) if (self.ignore_syntax) else tokens
 
@@ -129,7 +127,8 @@ class PomTokenizer(AbstractTokenizer):
                          "-=", "*=", "/=", "%=", "^=", "==", "!=", "<", ">",
                          "<=", ">=", "&&", "||", "?", ":", "&", "|", "^", "~",
                          "<<", ">>", ">>>" ";", "!=", ";", "(", ")", "[", "]",
-                         "{", "}", ",", "\"", "\'", "/>", "</","<?", "?>", "."]
+                         "{", "}", ",", "\"", "\'", "/>", "</","<?", "?>", ".",
+                        "$"]
 
 class JavaTokenizer(AbstractTokenizer):
     def comment_re(self):

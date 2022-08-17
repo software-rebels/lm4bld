@@ -3,7 +3,6 @@ import importlib
 import os
 import pickle
 import random
-import tarfile
 
 from nltk.lm.preprocessing import pad_both_ends
 from nltk.util import everygrams
@@ -15,12 +14,11 @@ from lm4bld.models.tokenize import PomTokenizer
 class Validator(metaclass=ABCMeta):
     def __init__(self, project, conf, order, listfile, tokenizer, fitclass):
         self.project = project
-        self.order = order 
+        self.order = order
         self.listfile = listfile
         self.tokenizer = tokenizer
         self.prefix = conf.get_prefix()
         self.tokenprefix = conf.get_tokenprefix()
-        self.tarfile = conf.get_tarfile()
         self.fitclass = fitclass
         self.filelevel = conf.get_filelevel()
         self.fitclassname = conf.get_fitclass()
@@ -76,15 +74,10 @@ class NLPValidator(Validator, metaclass=ABCMeta):
         if self.filelevel:
             return flist
 
-        tarhandle = tarfile.open(self.tarfile, 'r:') if self.tarfile else None
-
         for f in flist:
             t = self.tokenizer(f, self.prefix, self.tokenprefix,
                                self.ignore_syntax)
-            sents += t.load_tokens(tarhandle)
-
-        if tarhandle:
-            tarhandle.close()
+            sents += t.load_tokens()
 
         return sents
 

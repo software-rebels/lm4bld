@@ -16,7 +16,6 @@ tokenprefix: ../data/tokens/no-vers-paths
 
 fitpackage: lm4bld.se.pom
 fitclass: PomModel
-filelevel: true
 
 ################################################################################
 # Global config

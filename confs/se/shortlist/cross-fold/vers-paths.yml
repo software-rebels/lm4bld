@@ -16,7 +16,6 @@ tokenprefix: ../data/tokens/vers-paths
 
 fitpackage: lm4bld.models.pom
 fitclass: PomModel
-filelevel: true
 ignoresyntax: true
 
 ################################################################################

@@ -20,11 +20,10 @@ class Validator(metaclass=ABCMeta):
         self.prefix = conf.get_prefix()
         self.tokenprefix = conf.get_tokenprefix()
         self.fitclass = fitclass
-        self.filelevel = conf.get_filelevel()
         self.fitclassname = conf.get_fitclass()
         self.ignore_syntax = conf.get_ignoresyntax()
 
-        random.seed(666)
+        random.seed(666) # The best random seed \m/
 
     def lookup_class(self, mod_name, cname):
         mod = importlib.import_module(mod_name)
@@ -39,37 +38,21 @@ class Validator(metaclass=ABCMeta):
         fhandle.close()
         return flist
 
-    # Duplicated in NGramModel
-    def load_sents(self, flist):
-        sents = list()
-
-        for f in flist:
-            t = self.tokenizer(f, self.prefix, self.tokenprefix,
-                               self.ignore_syntax)
-            sents += t.load_tokens()
-
-        return sents
-
     def trainModel(self, trainCorpus, order):
         fitter = self.fitclass(order, self.tokenizer, self.prefix,
                                self.tokenprefix, self.ignore_syntax)
-        fitter.fit(trainCorpus, self.filelevel)
+        fitter.fit(trainCorpus)
 
         return fitter
 
     def testModel(self, fitter, testCorpus, order):
-        preppedData = self.prep_test_data(testCorpus, order)
-        return fitter.unkRate(preppedData, self.filelevel), fitter.crossEntropy(preppedData, self.filelevel)
+        return fitter.unkRate(testCorpus), fitter.crossEntropy(testCorpus)
 
     def getProject(self):
         return self.project
 
     @abstractmethod
     def load_data(self, flist):
-        raise NotImplementedError()
-
-    @abstractmethod
-    def prep_test_data(self, testdata, order):
         raise NotImplementedError()
 
     @abstractmethod
@@ -81,26 +64,7 @@ class NLPValidator(Validator, metaclass=ABCMeta):
         if flist is None:
             flist = self.load_filenames()
 
-        if self.filelevel:
-            return flist
-
-        return self.load_sents(flist)
-
-    def prep_test_data(self, testdata, order):
-        if self.filelevel:
-            return testdata
-
-        return self.grammify(testdata, order)
-
-    # Duplicated in NGramModel
-    def grammify(self, test_sents, order):
-        ngrams = list()
-
-        for sent in test_sents:
-            paddedTokens = list(pad_both_ends(sent, n=order))
-            ngrams += list(everygrams(paddedTokens, max_len=order))
-
-        return ngrams
+        return flist
 
 class CrossFoldValidator(NLPValidator, metaclass=ABCMeta):
     def __init__(self, project, conf, order, listfile, tokenizer, fitclass):

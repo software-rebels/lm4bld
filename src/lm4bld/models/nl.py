@@ -32,17 +32,17 @@ class NGramModel(Model):
 
         return ngrams
 
-    def fit(self, trainCorpus, filelevel):
+    def fit(self, trainCorpus, filelevel=True):
         train_sents = self.load_sents(trainCorpus) if filelevel else trainCorpus
         train_corp, vocab = padded_everygram_pipeline(self.order, train_sents)
         self.model.fit(train_corp, vocab)
 
-    def crossEntropy(self, indata, filelevel):
-        ngrams = self.grammify(self.load_sents(indata)) if filelevel else indata
+    def crossEntropy(self, flist):
+        ngrams = self.grammify(self.load_sents(flist))
         return self.model.entropy(ngrams)
 
-    def unkRate(self, indata, filelevel):
-        ngrams = self.grammify(self.load_sents(indata)) if filelevel else indata
+    def unkRate(self, flist):
+        ngrams = self.grammify(self.load_sents(flist))
         unk_count = 0
 
         for gram in ngrams:

@@ -28,7 +28,6 @@ PROCESS_POMS = 'process_poms'
 PROCESS_SOURCE = 'process_source'
 FITPACKAGE = 'fitpackage'
 FITCLASS = 'fitclass'
-FILELEVEL = 'filelevel'
 IGNORESYNTAX = 'ignoresyntax'
 
 class Config:
@@ -111,9 +110,6 @@ class Config:
 
     def get_fitclass(self):
         return self.confdata[FITCLASS]
-
-    def get_filelevel(self):
-        return self.confdata[FILELEVEL]
 
     def get_ignoresyntax(self):
         return self.confdata[IGNORESYNTAX]

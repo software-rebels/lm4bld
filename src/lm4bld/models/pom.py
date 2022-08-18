@@ -75,6 +75,15 @@ class PomMap:
 
         return [rtn, 1]
 
+    def flattened_view(self, ctype):
+        rtn = {}
+
+        for fmap in self.map:
+            mymap = self.map[fmap]
+            rtn |= mymap[ctype]
+
+        return rtn
+
 class PomModel(Model):
     def __init__(self, order, tokenizer, prefix, tokenprefix, ignore_syntax):
         super().__init__(order, tokenizer, prefix, tokenprefix, ignore_syntax)
@@ -86,17 +95,30 @@ class PomModel(Model):
         spl = s.split(NS_END, 1)
         return spl[-1]
 
+    def processTagName(self, filename, location, tname):
+        self.map.add(filename, CType.TAG, location, tname)
+
+    def processPayload(self, filename, tagstr, fulltagstr, payload):
+        self.map.add(filename, CType.TAGCONTENT, tagstr, payload)
+        self.map.add(filename, CType.TAGCONTENTLOC, fulltagstr, payload)
+
+    def processAttrKey(self, filename, tagstr, fulltagstr, attrkey):
+        self.map.add(filename, CType.ATTRKEY, tagstr, attrkey)
+        self.map.add(filename, CType.ATTRKEYLOC, fulltagstr, attrkey)
+
+    def processAttrVal(self, filename, attrkey, fullattrkey, attrval):
+        self.map.add(filename, CType.ATTRVAL, attrkey, attrval)
+        self.map.add(filename, CType.ATTRVALLOC, fullattrkey, attrval)
+
     def processTag(self, filename, tag, location):
         tagstr = self.removeNamespace(tag.tag)
         fulltagstr = "%s/%s" % (location, tagstr)
 
-        self.map.add(filename, CType.TAG, location, tagstr)
+        self.processTagName(filename, location, tagstr)
 
         if tag.text is not None and tag.text.strip():
             tagcontent = tag.text.strip()
-            #print("%s=%s" % (fulltagstr, tagcontent))
-            self.map.add(filename, CType.TAGCONTENT, tagstr, tagcontent)
-            self.map.add(filename, CType.TAGCONTENTLOC, fulltagstr, tagcontent)
+            self.processPayload(filename, tagstr, fulltagstr, tagcontent)
 
         # If we have some attribs
         for key in tag.attrib:
@@ -106,10 +128,8 @@ class PomModel(Model):
 
             fullattribstr = "%s.%s" % (fulltagstr, keystr)
 
-            self.map.add(filename, CType.ATTRKEY, tagstr, keystr)
-            self.map.add(filename, CType.ATTRKEYLOC, fulltagstr, keystr)
-            self.map.add(filename, CType.ATTRVAL, keystr, valstr)
-            self.map.add(filename, CType.ATTRVALLOC, fullattribstr, valstr)
+            self.processAttrKey(filename, tagstr, fulltagstr, keystr)
+            self.processAttrVal(filename, keystr, fullattribstr, valstr)
 
     def guessNext(self, context=".", ctype=CType.TAG):
         return self.map.most_common(context, ctype)
@@ -117,7 +137,7 @@ class PomModel(Model):
     def print(self):
         print(self.tagmap)
 
-    def fit(self, flist, filelevel):
+    def fit(self, flist):
         for f in flist:
             pp = PomParse(f, self)
             pp.flatten()
@@ -164,7 +184,7 @@ class PomModel(Model):
     def logscore(self, ctype, context, term):
         return self.map.logscore(ctype, context, term)
 
-    def crossEntropy(self, flist, filelevel):
+    def crossEntropy(self, flist):
         grams = self.buildGrams(flist)
         sumScore = 0
 
@@ -178,7 +198,7 @@ class PomModel(Model):
     def unk_tokens(self, ctype, context, term):
         return self.map.unk_tokens(ctype, context, term)
 
-    def unkRate(self, flist, filelevel):
+    def unkRate(self, flist):
         grams = self.buildGrams(flist)
         count = 0
         total = 0

@@ -13,12 +13,23 @@ class EnsembleModel(PomModel):
         self.lm = NGramModel(order, tokenizer, prefix, tokenprefix, ignore_syntax)
         self.tokenizer = tokenizer(None, prefix, tokenprefix, ignore_syntax, True, True)
 
+    def payload_sents(self):
+        mymap = self.map.flattened_view(CType.TAGCONTENTLOC)
+        mysents = list()
 
-    def fit(self, flist, filelevel):
-        super().fit(flist, filelevel)
-        self.lm.fit(flist, filelevel)
+        for location in mymap:
+            for payload in mymap[location]:
+                tokens = location.split("/")
+                tokens += self.tokenize(payload)
+                mysents.append(tokens)
 
-    def grammify(self, term):
+        return mysents
+
+    def fit(self, flist):
+        super().fit(flist)
+        self.lm.fit(self.payload_sents(), False)
+
+    def tokenize(self, term):
         preprocessed_term = self.tokenizer.preprocess_strings(term)
         tokens = self.tokenizer.tokenize_string(preprocessed_term)
         clean_tokens = tokens
@@ -28,13 +39,17 @@ class EnsembleModel(PomModel):
             to_clean.append(tokens)
             clean_tokens = self.tokenizer.remove_syntax(to_clean)[0]
 
-        padded_tokens = list(pad_both_ends(clean_tokens, n=self.order))
+        return clean_tokens
+
+    def grammify(self, context, term):
+        tokens = context.split("/")
+        tokens += self.tokenize(term)
+        padded_tokens = list(pad_both_ends(tokens, n=self.order))
         return list(everygrams(padded_tokens, max_len=self.order))
 
-    def payloadGramscore(self, term):
+    def payloadGramscore(self, context, payload):
         gramScore = 0
-        ngrams = self.grammify(term)
-        print(ngrams)
+        ngrams = self.grammify(context, payload)
 
         # Ripped from nltk.lm.api
         for ngram in ngrams:
@@ -44,13 +59,13 @@ class EnsembleModel(PomModel):
         return gramScore/len(ngrams) if len(ngrams) > 0 else None
 
     def logscore(self, ctype, context, term):
-        return self.payloadGramscore(term) if (ctype is CType.TAGCONTENTLOC or ctype is CType.TAGCONTENT) else super().logscore(ctype, context, term)
+        return self.payloadGramscore(context, term) if (ctype is CType.TAGCONTENTLOC or ctype is CType.TAGCONTENT) else super().logscore(ctype, context, term)
 
     def unk_tokens(self, ctype, context, term):
         rtn = None
 
         if (ctype is CType.TAGCONTENTLOC or ctype is CType.TAGCONTENT):
-            ngrams = self.grammify(term)
+            ngrams = self.grammify(context, term)
             unk_count = 0
             for gram in ngrams:
                 gram_or_unk = self.lm.model.vocab.lookup(gram)

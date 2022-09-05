@@ -16,7 +16,6 @@ tokenprefix: ../data/tokens/vers-paths
 
 fitpackage: lm4bld.models.nl
 fitclass: NGramModel
-filelevel: false
 ignoresyntax: true
 
 ################################################################################
@@ -28,7 +27,7 @@ task: CrossFoldExperiment
 process_source: true
 process_poms: true
 
-maxjobs: 4 # Size of the process pool to execute tasks in parallel
+maxjobs: 6 # Size of the process pool to execute tasks in parallel
 
 pomlistdir: pomlists
 srclistdir: javalists

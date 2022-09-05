@@ -2,7 +2,7 @@
 # RQ2 config
 ################################################################################
 
-crossproj_order: 3 # Specified in Hindle et al.
+crossproj_order: 10
 modelprefix: models
 
 ################################################################################
@@ -11,6 +11,10 @@ modelprefix: models
 
 prefix: ../data/sources
 tokenprefix: ../data/tokens/vers-paths
+
+fitpackage: lm4bld.models.nl
+fitclass: NGramModel
+ignoresyntax: true
 
 ################################################################################
 # Global config

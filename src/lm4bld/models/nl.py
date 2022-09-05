@@ -53,6 +53,39 @@ class NGramModel(Model):
 
         return unk_count / len(ngrams)
 
+    def guessNextTokens(self, testCorpus, nCandidates, filelevel=True):
+        correct = {}
+        incorrect = {}
+
+        sents = self.load_sents(testCorpus) if filelevel else testCorpus
+
+        for sent in sents:
+            context = ("<s>",) * (self.order-1) # Context is initialized with padding up the order
+            for token in sent:
+                guesses = self.guessNextToken(context, nCandidates)
+                if (token in guesses):
+                    if len(token) not in correct:
+                        correct[len(token)] = list()
+
+                    correct[len(token)].append(token)
+
+                else:
+                    if len(token) not in incorrect:
+                        incorrect[len(token)] = list()
+
+                    incorrect[len(token)].append(token)
+
+                context = context[1:] + (token,)
+
+        rtn = {}
+        allkeys = set(list(correct.keys()) + list(incorrect.keys()))
+        for token_len in allkeys:
+            n_correct = len(correct[token_len]) if token_len in correct else 0
+            n_incorrect = len(incorrect[token_len]) if token_len in incorrect else 0
+            rtn[token_len] = [n_correct, n_incorrect]
+
+        return rtn
+
     def guessNextToken(self, context, nCandidates):
         sorted_sample = sorted(self.model.context_counts(context))
         return sorted_sample[0:nCandidates]

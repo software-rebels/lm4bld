@@ -2,7 +2,7 @@
 # RQ2 config
 ################################################################################
 
-crossproj_order: 3 # Specified in Hindle et al.
+crossproj_order: 10
 modelprefix: models
 
 ################################################################################
@@ -11,6 +11,10 @@ modelprefix: models
 
 prefix: ../data/sources
 tokenprefix: ../data/tokens/vers-paths
+
+fitpackage: lm4bld.models.nl
+fitclass: NGramModel
+ignoresyntax: true
 
 ################################################################################
 # Global config
@@ -21,7 +25,7 @@ task: CrossProjectTestModelsExperiment
 process_source: true
 process_poms: true
 
-maxjobs: 24 # Size of the process pool to execute tasks in parallel
+maxjobs: 6 # Size of the process pool to execute tasks in parallel
 
 pomlistdir: pomlists
 srclistdir: javalists

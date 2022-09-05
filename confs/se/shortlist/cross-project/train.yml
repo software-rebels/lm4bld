@@ -2,7 +2,7 @@
 # RQ2 config
 ################################################################################
 
-crossproj_order: 1 # Ignored
+crossproj_order: 10
 modelprefix: models
 
 ################################################################################
@@ -10,11 +10,11 @@ modelprefix: models
 ################################################################################
 
 prefix: ../data/sources
-tokenprefix: ../data/tokens/no-vers-no-paths
+tokenprefix: ../data/tokens/vers-paths
 
-fitpackage: lm4bld.se.pom
-fitclass: PomModel
-filelevel: true
+fitpackage: lm4bld.models.ensemble
+fitclass: EnsembleModel
+ignoresyntax: true
 
 ################################################################################
 # Global config

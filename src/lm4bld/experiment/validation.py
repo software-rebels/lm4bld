@@ -144,9 +144,10 @@ class JavaCrossFoldValidator(CrossFoldValidator):
         return f'{unkline}{os.linesep}{entline}'
 
 class CrossProjectTrainModelsValidator(NLPValidator, metaclass=ABCMeta):
-    def __init__(self, project, conf, listfile, tokenizer, fitclass=NGramModel):
+    def __init__(self, project, conf, listfile, tokenizer):
         super().__init__(project, conf, conf.get_crossproj_order(), listfile,
-                         tokenizer, fitclass)
+                         tokenizer, self.lookup_class(conf.get_fitpackage(),
+                                                      conf.get_fitclass()))
         self.modelprefix = conf.get_modelprefix()
 
     def validate(self, executor):
@@ -174,19 +175,20 @@ class JavaCrossProjectTrainModelsValidator(CrossProjectTrainModelsValidator):
                          JavaTokenizer)
 
     def get_model_fname(self):
-        return f"{self.modelprefix}{os.path.sep}{self.project}-java.pkl"
+        return f"{self.modelprefix}{os.path.sep}{self.project}-java-{self.fitclassname}.pkl"
 
 class PomCrossProjectTrainModelsValidator(CrossProjectTrainModelsValidator):
     def __init__(self, project, conf):
         super().__init__(project, conf, conf.get_pomlist(project), PomTokenizer)
 
     def get_model_fname(self):
-        return f"{self.modelprefix}{os.path.sep}{self.project}-pom.pkl"
+        return f"{self.modelprefix}{os.path.sep}{self.project}-pom-{self.fitclassname}.pkl"
 
 class CrossProjectTestModelsValidator(NLPValidator, metaclass=ABCMeta):
     def __init__(self, project, conf, listfile, tokenizer):
         super().__init__(project, conf, conf.get_crossproj_order(), listfile,
-                         tokenizer)
+                         tokenizer, self.lookup_class(conf.get_fitpackage(),
+                                                      conf.get_fitclass()))
         self.projects = conf.get_projects()
         self.modelprefix = conf.get_modelprefix()
 
@@ -239,7 +241,7 @@ class PomCrossProjectTestModelsValidator(CrossProjectTestModelsValidator):
         return PomCrossProjectTestModelsValidator(projname, self.conf)
 
     def get_model_fname(self):
-        return f"{self.modelprefix}{os.path.sep}{self.project}-pom.pkl"
+        return f"{self.modelprefix}{os.path.sep}{self.project}-pom-{self.fitclassname}.pkl"
 
 class JavaCrossProjectTestModelsValidator(CrossProjectTestModelsValidator):
     def __init__(self, project, conf):
@@ -254,12 +256,13 @@ class JavaCrossProjectTestModelsValidator(CrossProjectTestModelsValidator):
         return JavaCrossProjectTestModelsValidator(projname, self.conf)
 
     def get_model_fname(self):
-        return f"{self.modelprefix}{os.path.sep}{self.project}-java.pkl"
+        return f"{self.modelprefix}{os.path.sep}{self.project}-java-{self.fitclassname}.pkl"
 
-class NextTokenValidator(NLPValidator, metaclass=ABCMeta):
-    def __init__(self, project, conf, listfile, tokenizer, fitclass=NGramModel):
+class NextTokenValidator(NLPValidator):
+    def __init__(self, project, conf, listfile, tokenizer):
         super().__init__(project, conf, conf.get_next_token_order(), listfile,
-                         tokenizer, fitclass)
+                         tokenizer, self.lookup_class(conf.get_fitpackage(),
+                                                      conf.get_fitclass()))
         self.testSize = conf.get_next_token_test_size()
         self.minCandidates = conf.get_min_candidates()
         self.maxCandidates = conf.get_max_candidates() +1
@@ -277,46 +280,15 @@ class NextTokenValidator(NLPValidator, metaclass=ABCMeta):
 
         return trainCorpus, testCorpus
 
-    def initContext(self):
-        return ("<s>",) * (self.order-1)
-
-    @abstractmethod
-    def output_str(self, train_proj, test_proj, unk_rate, entropy):
-        raise NotImplementedError()
-
     def guessNextTokenEvaluator(self, fitter, testCorpus, nCandidates):
-        correct = {}
-        incorrect = {}
-
-        for sent in testCorpus:
-            context = self.initContext()
-            for token in sent:
-                guesses = fitter.guessNextToken(context, nCandidates)
-                if (token in guesses):
-                    if len(token) not in correct:
-                        correct[len(token)] = list()
-
-                    correct[len(token)].append(token)
-
-                else:
-                    if len(token) not in incorrect:
-                        incorrect[len(token)] = list()
-
-                    incorrect[len(token)].append(token)
-
-                context = context[1:] + (token,)
-
+        perf_dict = fitter.guessNextTokens(testCorpus, nCandidates)
         rtnstr = ""
-        allkeys = set(list(correct.keys()) + list(incorrect.keys()))
-        for token_len in allkeys:
+        for token_len in perf_dict:
             if rtnstr:
                 rtnstr += os.linesep
 
-            n_correct = len(correct[token_len]) if token_len in correct else 0
-            n_incorrect = len(incorrect[token_len]) if token_len in incorrect else 0
-
-            rtnstr += self.output_str(nCandidates, token_len, n_correct,
-                                      n_incorrect)
+            myvals = perf_dict[token_len]
+            rtnstr += f'{self.project},{self.fitclassname},{nCandidates},{token_len},{myvals[0]},{myvals[1]}'
 
         return rtnstr
 
@@ -333,25 +305,19 @@ class NextTokenValidator(NLPValidator, metaclass=ABCMeta):
 
         return futures_list
 
+
 class JavaNextTokenValidator(NextTokenValidator):
     def __init__(self, project, conf):
         super().__init__(project, conf, conf.get_srclist(project),
                          JavaTokenizer)
 
-    def output_str(self, n_candidates, token_len, n_correct, n_incorrect):
-        return f'{self.project},java,{n_candidates},{token_len},{n_correct},{n_incorrect}'
-
 class PomNextTokenValidator(NextTokenValidator):
     def __init__(self, project, conf):
         super().__init__(project, conf, conf.get_pomlist(project), PomTokenizer)
 
-    def output_str(self, n_candidates, token_len, n_correct, n_incorrect):
-        return f'{self.project},pom,{n_candidates},{token_len},{n_correct},{n_incorrect}'
-
-
 class TokenizeValidator(NLPValidator, metaclass=ABCMeta):
     def __init__(self, project, conf, listfile, tokenizer):
-        super().__init__(project, conf, 3, listfile, tokenizer)
+        super().__init__(project, conf, None, listfile, tokenizer)
         self.versions = conf.get_versions()
         self.paths = conf.get_paths()
 

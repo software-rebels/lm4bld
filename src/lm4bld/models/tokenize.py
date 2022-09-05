@@ -130,7 +130,7 @@ class PomTokenizer(AbstractTokenizer):
                          "<=", ">=", "&&", "||", "?", ":", "&", "|", "^", "~",
                          "<<", ">>", ">>>" ";", "!=", ";", "(", ")", "[", "]",
                          "{", "}", ",", "\"", "\'", "/>", "</","<?", "?>", ".",
-                        "$"]
+                        "$", "@"]
 
 class JavaTokenizer(AbstractTokenizer):
     def comment_re(self):

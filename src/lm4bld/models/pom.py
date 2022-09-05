@@ -42,13 +42,19 @@ class PomMap:
         self.map[filename][ctype][key].append(value)
         self.vocab.add(value)
 
-    def most_common(self, ctype, context):
+    def most_common(self, ctype, context, nCandidates):
         myHist = Counter()
         for fmap in self.map:
             mymap = self.map[fmap]
-            myHist += Counter(mymap[ctype][context])
+            if (context in mymap[ctype]):
+                myHist += Counter(mymap[ctype][context])
 
-        return myHist.most_common()
+        rtn = []
+        for t in myHist.most_common(nCandidates):
+            rtn.append(t[0])
+
+        return rtn
+
 
     def logscore(self, ctype, context, term):
         freq = 0
@@ -123,16 +129,13 @@ class PomModel(Model):
         # If we have some attribs
         for key in tag.attrib:
             keystr = self.removeNamespace(key)
-            valstr = self.removeNamespace(tag.attrib[key])
+            valstr = tag.attrib[key]
             #print("%s/%s.%s=%s" % (location, tagstr, keystr, valstr))
 
             fullattribstr = "%s.%s" % (fulltagstr, keystr)
 
             self.processAttrKey(filename, tagstr, fulltagstr, keystr)
             self.processAttrVal(filename, keystr, fullattribstr, valstr)
-
-    def guessNext(self, context=".", ctype=CType.TAG):
-        return self.map.most_common(context, ctype)
 
     def print(self):
         print(self.tagmap)
@@ -166,6 +169,9 @@ class PomModel(Model):
             tagcontent = tag.text.strip()
             self.grams.append([CType.TAGCONTENTLOC, location, tagcontent])
 
+        # Update location context
+        location = "%s/%s" % (location, self.removeNamespace(tag.tag))
+
         for key in tag.attrib:
             # process attrib keys
             keystr = self.removeNamespace(key)
@@ -173,10 +179,8 @@ class PomModel(Model):
 
             # process attrib vals
             fullattribstr = "%s.%s" % (location, keystr)
-            valstr = self.removeNamespace(tag.attrib[key])
+            valstr = tag.attrib[key]
             self.grams.append([CType.ATTRVALLOC, fullattribstr, valstr])
-
-        location = "%s/%s" % (location, self.removeNamespace(tag.tag))
 
         for child in tag:
             self.buildGramsFromTag(etree, child, location)
@@ -209,6 +213,58 @@ class PomModel(Model):
             total += tok_count
 
         return count / total
+
+    def processGramForNextTokenExp(self, gram, nCandidates):
+        correct = {}
+        incorrect = {}
+        token = gram[-1]
+        guesses = self.map.most_common(gram[0], gram[1], nCandidates)
+        if (token in guesses):
+            if len(token) not in correct:
+                correct[len(token)] = list()
+
+            correct[len(token)].append(token)
+
+        else:
+            if len(token) not in incorrect:
+                incorrect[len(token)] = list()
+
+            incorrect[len(token)].append(token)
+
+        return correct, incorrect
+
+    def guessNextTokens(self, testCorpus, nCandidates):
+        correct = {}
+        incorrect = {}
+
+        grams = self.buildGrams(testCorpus)
+
+        for gram in grams:
+            if self.tokenizer.is_syntax(None, gram[2]) or gram[2].isnumeric() or gram[2].isspace():
+                continue
+
+            c, i = self.processGramForNextTokenExp(gram, nCandidates)
+
+            for tlen in c:
+                if tlen not in correct:
+                    correct[tlen] = list()
+
+                correct[tlen].extend(c[tlen])
+
+            for tlen in i:
+                if tlen not in incorrect:
+                    incorrect[tlen] = list()
+
+                incorrect[tlen].extend(i[tlen])
+
+        rtn = {}
+        allkeys = set(list(correct.keys()) + list(incorrect.keys()))
+        for token_len in allkeys:
+            n_correct = len(correct[token_len]) if token_len in correct else 0
+            n_incorrect = len(incorrect[token_len]) if token_len in incorrect else 0
+            rtn[token_len] = [n_correct, n_incorrect]
+
+        return rtn
 
 class AblatePayloadPomModel(PomModel):
     def logscore(self, ctype, context, term):

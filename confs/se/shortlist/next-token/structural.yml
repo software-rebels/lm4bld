@@ -16,8 +16,8 @@ test_ratio_threshold: 0.5 # Any project where the next_token_test_size is larger
 prefix: ../data/sources
 tokenprefix: ../data/tokens/vers-paths
 
-fitpackage: lm4bld.models.nl
-fitclass: NGramModel
+fitpackage: lm4bld.models.pom
+fitclass: PomModel
 ignoresyntax: true
 
 ################################################################################
@@ -26,7 +26,7 @@ ignoresyntax: true
 
 task: NextTokenExperiment
 
-process_source: true
+process_source: false
 process_poms: true
 
 maxjobs: 6 # Size of the process pool to execute tasks in parallel

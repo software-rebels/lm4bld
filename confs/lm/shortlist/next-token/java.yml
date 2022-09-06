@@ -27,7 +27,7 @@ ignoresyntax: true
 task: NextTokenExperiment
 
 process_source: true
-process_poms: true
+process_poms: false
 
 maxjobs: 6 # Size of the process pool to execute tasks in parallel
 

@@ -258,7 +258,7 @@ class JavaCrossProjectTestModelsValidator(CrossProjectTestModelsValidator):
     def get_model_fname(self):
         return f"{self.modelprefix}{os.path.sep}{self.project}-java-{self.fitclassname}.pkl"
 
-class NextTokenValidator(NLPValidator):
+class NextTokenValidator(NLPValidator, metaclass=ABCMeta):
     def __init__(self, project, conf, listfile, tokenizer):
         super().__init__(project, conf, conf.get_next_token_order(), listfile,
                          tokenizer, self.lookup_class(conf.get_fitpackage(),
@@ -288,9 +288,13 @@ class NextTokenValidator(NLPValidator):
                 rtnstr += os.linesep
 
             myvals = perf_dict[token_len]
-            rtnstr += f'{self.project},{self.fitclassname},{nCandidates},{token_len},{myvals[0]},{myvals[1]}'
+            rtnstr += f'{self.project},{self.sourceType()},{self.fitclassname},{nCandidates},{token_len},{myvals[0]},{myvals[1]}'
 
         return rtnstr
+
+    @abstractmethod
+    def sourceType(self):
+        raise NotImplementedError()
 
     def validate(self, executor):
         futures_list = list()
@@ -311,9 +315,15 @@ class JavaNextTokenValidator(NextTokenValidator):
         super().__init__(project, conf, conf.get_srclist(project),
                          JavaTokenizer)
 
+    def sourceType(self):
+        return "java"
+
 class PomNextTokenValidator(NextTokenValidator):
     def __init__(self, project, conf):
         super().__init__(project, conf, conf.get_pomlist(project), PomTokenizer)
+
+    def sourceType(self):
+        return "pom"
 
 class TokenizeValidator(NLPValidator, metaclass=ABCMeta):
     def __init__(self, project, conf, listfile, tokenizer):

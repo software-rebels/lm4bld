@@ -17,9 +17,9 @@ modelprefix: models
 # RQ4 config
 ################################################################################
 
-next_token_order: 3 # Specified in Hindle et al.
+next_token_order: 10
 next_token_test_size: 40
-min_candidates: 2
+min_candidates: 1
 max_candidates: 10
 test_ratio_threshold: 0.5
 
@@ -36,16 +36,15 @@ tokenprefix: ../data/tokens/vers-paths
 # Global config
 ################################################################################
 
-task: CrossFoldExperiment # Valid settings: CrossFoldExperiment, CrossProjectExperiment, NextTokenExperiment, TokenizeExperiment, LocExperiment 
+task: NextTokenExperiment # Valid settings: CrossFoldExperiment, CrossProjectExperiment, NextTokenExperiment, TokenizeExperiment, LocExperiment 
 fitpackage: lm4bld.models.ensemble
 fitclass: EnsembleModel
-filelevel: true
 ignoresyntax: true
 
 process_source: false
 process_poms: true
 
-maxjobs: 1 # Size of the process pool to execute tasks in parallel
+maxjobs: 10 # Size of the process pool to execute tasks in parallel
 
 pomlistdir: pomlists
 srclistdir: javalists

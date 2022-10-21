@@ -2,18 +2,19 @@
 # Tokenizer config
 ################################################################################
 
-normalize_version_strings: true
-normalize_paths: true
 prefix: ../data/sources
 tokenprefix: ../data/tokens/vers-paths
+
+fitpackage: placeholder
 fitclass: placeholder
+ignoresyntax: true
+
 
 ################################################################################
 # Global config
 ################################################################################
 
 task: LocExperiment
-filelevel: false
 
 process_source: true 
 process_poms: true

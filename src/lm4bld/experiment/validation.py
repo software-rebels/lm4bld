@@ -1,6 +1,7 @@
 from abc import ABCMeta, abstractmethod
 import importlib
 import os
+from pathlib import Path
 import pickle
 import random
 
@@ -163,6 +164,7 @@ class CrossProjectTrainModelsValidator(NLPValidator, metaclass=ABCMeta):
         model_fname = self.get_model_fname()
         my_fit = self.trainModel(self.load_data(), self.order)
 
+        Path(os.path.dirname(model_fname)).mkdir(parents=True, exist_ok=True)
         fhandle = open(model_fname, 'wb')
         pickle.dump(my_fit, fhandle)
         fhandle.close()
@@ -327,7 +329,7 @@ class PomNextTokenValidator(NextTokenValidator):
 
 class TokenizeValidator(NLPValidator, metaclass=ABCMeta):
     def __init__(self, project, conf, listfile, tokenizer):
-        super().__init__(project, conf, None, listfile, tokenizer)
+        super().__init__(project, conf, None, listfile, tokenizer, None)
         self.versions = conf.get_versions()
         self.paths = conf.get_paths()
 

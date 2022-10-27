@@ -4,7 +4,7 @@
 
 niter: 1 # Number of iterations of N folds
 nfolds: 10 # Number of folds per iteration
-minorder: 6 # The minimum number of grams to explore
+minorder: 1 # The minimum number of grams to explore
 maxorder: 10 # The maximum number of grams to explore
 
 ################################################################################
@@ -27,7 +27,7 @@ task: CrossFoldExperiment
 process_source: true
 process_poms: true
 
-maxjobs: 6 # Size of the process pool to execute tasks in parallel
+maxjobs: 4 # Size of the process pool to execute tasks in parallel
 
 pomlistdir: pomlists
 srclistdir: javalists

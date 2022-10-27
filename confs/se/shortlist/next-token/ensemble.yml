@@ -29,7 +29,7 @@ task: NextTokenExperiment
 process_source: false
 process_poms: true
 
-maxjobs: 6 # Size of the process pool to execute tasks in parallel
+maxjobs: 4 # Size of the process pool to execute tasks in parallel
 
 pomlistdir: pomlists
 srclistdir: javalists

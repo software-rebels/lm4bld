@@ -3,7 +3,7 @@
 ################################################################################
 
 crossproj_order: 10
-modelprefix: models
+modelprefix: models/pom
 
 ################################################################################
 # Tokenizer config
@@ -12,8 +12,8 @@ modelprefix: models
 prefix: ../data/sources
 tokenprefix: ../data/tokens/vers-paths
 
-fitpackage: lm4bld.models.ensemble
-fitclass: EnsembleModel
+fitpackage: lm4bld.models.pom
+fitclass: PomModel
 ignoresyntax: true
 
 ################################################################################
@@ -25,7 +25,7 @@ task: CrossProjectTrainModelsExperiment
 process_source: false
 process_poms: true
 
-maxjobs: 24 # Size of the process pool to execute tasks in parallel
+maxjobs: 4 # Size of the process pool to execute tasks in parallel
 
 pomlistdir: pomlists
 srclistdir: javalists

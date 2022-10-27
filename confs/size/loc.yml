@@ -9,7 +9,6 @@ fitpackage: placeholder
 fitclass: placeholder
 ignoresyntax: true
 
-
 ################################################################################
 # Global config
 ################################################################################
@@ -19,7 +18,7 @@ task: LocExperiment
 process_source: true 
 process_poms: true
 
-maxjobs: 24 # Size of the process pool to execute tasks in parallel
+maxjobs: 4 # Size of the process pool to execute tasks in parallel
 
 pomlistdir: pomlists
 srclistdir: javalists

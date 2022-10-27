@@ -1,11 +1,9 @@
 ################################################################################
-# RQ1 config
+# RQ2 config
 ################################################################################
 
-niter: 1 # Number of iterations of N folds
-nfolds: 10 # Number of folds per iteration
-minorder: 1 # The minimum number of grams to explore
-maxorder: 10 # The maximum number of grams to explore
+crossproj_order: 10
+modelprefix: models/ensemble
 
 ################################################################################
 # Tokenizer config
@@ -14,15 +12,15 @@ maxorder: 10 # The maximum number of grams to explore
 prefix: ../data/sources
 tokenprefix: ../data/tokens/vers-paths
 
-fitpackage: lm4bld.models.pom
-fitclass: PomModel
+fitpackage: lm4bld.models.ensemble
+fitclass: EnsembleModel
 ignoresyntax: true
 
 ################################################################################
 # Global config
 ################################################################################
 
-task: CrossFoldExperiment
+task: CrossProjectTestModelsExperiment
 
 process_source: false
 process_poms: true

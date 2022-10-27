@@ -4,6 +4,11 @@
 
 normalize_version_strings: true
 normalize_paths: true
+
+fitpackage: placeholder
+fitclass: placeholder
+ignoresyntax: false # Deal with this at a later time
+
 prefix: ../data/sources
 tokenprefix: ../data/tokens/vers-paths
 

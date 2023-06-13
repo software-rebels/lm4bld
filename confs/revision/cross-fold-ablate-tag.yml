@@ -1,0 +1,39 @@
+################################################################################
+# RQ1 config
+################################################################################
+
+niter: 1 # Number of iterations of N folds
+nfolds: 10 # Number of folds per iteration
+minorder: 1 # The minimum number of grams to explore
+maxorder: 1 # The maximum number of grams to explore
+
+################################################################################
+# Tokenizer config
+################################################################################
+
+prefix: ../data/sources
+tokenprefix: ../data/tokens/vers-paths
+
+fitpackage: lm4bld.models.pom
+fitclass: AblateTagPomModel
+ignoresyntax: true
+
+################################################################################
+# Global config
+################################################################################
+
+task: CrossFoldExperiment
+
+process_source: false
+process_poms: true
+
+maxjobs: 16 # Size of the process pool to execute tasks in parallel
+
+pomlistdir: pomlists
+srclistdir: javalists
+
+projects:
+- wildfly
+- wildfly-core
+- wildfly-server-migration
+- jaxb-ri

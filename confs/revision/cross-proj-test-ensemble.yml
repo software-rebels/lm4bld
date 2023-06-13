@@ -1,0 +1,76 @@
+################################################################################
+# RQ2 config
+################################################################################
+
+crossproj_order: 10
+modelprefix: models/ensemble
+
+################################################################################
+# Tokenizer config
+################################################################################
+
+prefix: ../data/sources
+tokenprefix: ../data/tokens/vers-paths
+
+fitpackage: lm4bld.models.ensemble
+fitclass: EnsembleModel
+ignoresyntax: true
+
+################################################################################
+# Global config
+################################################################################
+
+task: CrossProjectTestModelsExperiment
+
+process_source: false
+process_poms: true
+
+maxjobs: 12 # Size of the process pool to execute tasks in parallel
+
+pomlistdir: pomlists
+srclistdir: javalists
+
+projects:
+- drill
+- qpid
+- plc4x
+- logging
+- uima
+- asterixdb
+- streams
+- ignite
+- brooklyn
+- dubbo
+- druid
+- hive
+- syncope
+- jclouds
+- zeppelin
+- pulsar
+- archiva
+- manifoldcf
+- felix
+- axis
+- hbase
+- isis
+- ambari
+- directory
+- jackrabbit
+- hadoop
+- royale
+- portals
+- commons
+- james
+- aries
+- flink
+- servicecomb
+- karaf
+- activemq
+- nifi
+- tomee
+- cxf
+- camel
+- wildfly
+- wildfly-core
+- wildfly-server-migration
+- jaxb-ri

@@ -1,0 +1,49 @@
+################################################################################
+# Tokenizer config
+################################################################################
+
+normalize_version_strings: true
+normalize_paths: true
+
+fitpackage: placeholder
+fitclass: placeholder
+ignoresyntax: false # Deal with this at a later time
+
+prefix: ../data/sources
+tokenprefix: ../data/tokens/vers-paths
+
+################################################################################
+# Global config
+################################################################################
+
+task: TokenizeExperiment
+
+process_source: true
+process_poms: true
+
+maxjobs: 28 # Size of the process pool to execute tasks in parallel
+
+pomlistdir: pomlists
+srclistdir: javalists
+
+projects:
+- galleon
+- galleon-plugins
+- jandex-maven-plugin
+- jaxb-ri
+- jboss-ejb-client
+- jboss-ejb3-ext-api
+- maven-plugins
+- wildfly
+- wildfly-archetypes
+- wildfly-arquillian
+- wildfly-bom-builder-plugin
+- wildfly-common
+- wildfly-core
+- wildfly-discovery
+- wildfly-http-client
+- wildfly-legacy-test
+- wildfly-maven-plugin
+- wildfly-naming-client
+- wildfly-server-migration
+- wildfly-transaction-client

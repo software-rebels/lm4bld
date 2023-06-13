@@ -90,6 +90,9 @@ class PomMap:
 
         return rtn
 
+    def vocabSize(self):
+        return len(self.vocab)
+
 class PomModel(Model):
     def __init__(self, order, tokenizer, prefix, tokenprefix, ignore_syntax):
         super().__init__(order, tokenizer, prefix, tokenprefix, ignore_syntax)
@@ -214,6 +217,9 @@ class PomModel(Model):
 
         return count / total
 
+    def vocabSize(self):
+        return self.map.vocabSize()
+
     def processGramForNextTokenExp(self, gram, nCandidates):
         correct = {}
         incorrect = {}
@@ -265,6 +271,12 @@ class PomModel(Model):
             rtn[token_len] = [n_correct, n_incorrect]
 
         return rtn
+
+    def globalGuessNextToken(self, testCorpus, budget):
+        budget_remaining = budget
+        correct = list()
+        incorrect = list()
+        max_guesses = 10
 
 class AblatePayloadPomModel(PomModel):
     def logscore(self, ctype, context, term):

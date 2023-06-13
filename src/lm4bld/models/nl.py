@@ -53,6 +53,9 @@ class NGramModel(Model):
 
         return unk_count / len(ngrams)
 
+    def vocabSize(self):
+        return len(self.model.vocab)
+
     def guessNextTokens(self, testCorpus, nCandidates, filelevel=True):
         correct = {}
         incorrect = {}
@@ -89,3 +92,41 @@ class NGramModel(Model):
     def guessNextToken(self, context, nCandidates):
         sorted_sample = sorted(self.model.context_counts(context))
         return sorted_sample[0:nCandidates]
+
+    def globalGuessNextTokens(self, testCorpus, budget):
+        budget_remaining = budget
+        correct = list()
+        incorrect = list()
+        max_guesses = 10
+
+        for f in testCorpus:
+            sents = self.load_sents([f])
+            #sents.pop(0) # Get rid of first line, since it is boilerplate
+
+            for sent in sents:
+                context = ("<s>",) * (self.order-1) # Context is initialized with padding up the order
+
+                for token in sent:
+                    guesses = self.guessNextToken(context, max_guesses)
+
+                    spent_budget = max_guesses
+
+                    if token in guesses:
+                        spent_budget = guesses.index(token)
+                        correct.append(token)
+                    else:
+                        incorrect.append(token)
+
+                    budget_remaining -= spent_budget
+                    context = context[1:] + (token,)
+
+                    if budget_remaining <= 0:
+                        break
+
+                if budget_remaining <= 0:
+                    break
+
+            if budget_remaining <= 0:
+                break
+
+        return len(correct), len(incorrect)

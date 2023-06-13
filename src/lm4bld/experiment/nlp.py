@@ -6,6 +6,8 @@ from lm4bld.experiment.validation import PomCrossProjectTestModelsValidator
 from lm4bld.experiment.validation import JavaCrossProjectTestModelsValidator
 from lm4bld.experiment.validation import JavaNextTokenValidator
 from lm4bld.experiment.validation import PomNextTokenValidator
+from lm4bld.experiment.validation import JavaGlobalNextTokenValidator
+from lm4bld.experiment.validation import PomGlobalNextTokenValidator
 from lm4bld.experiment.validation import JavaTokenizeValidator
 from lm4bld.experiment.validation import PomTokenizeValidator
 from lm4bld.experiment.validation import JavaLocValidator
@@ -39,6 +41,13 @@ class NextTokenExperiment(Experiment):
 
     def getPomValidator(self):
         return PomNextTokenValidator(self.project, self.conf)
+
+class GlobalNextTokenExperiment(Experiment):
+    def getSrcValidator(self):
+        return JavaGlobalNextTokenValidator(self.project, self.conf)
+
+    def getPomValidator(self):
+        return PomGlobalNextTokenValidator(self.project, self.conf)
 
 class TokenizeExperiment(Experiment):
     def getSrcValidator(self):

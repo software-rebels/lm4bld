@@ -459,3 +459,93 @@ class JavaLocValidator(LocValidator):
 
     def output_str(self, count):
         return f"{self.project},java,{count}"
+
+class TokenCountValidator(NLPValidator, metaclass=ABCMeta):
+    @abstractmethod
+    def output_str(self, count):
+        raise NotImplementedError()
+
+    def load_data(self, flist=None):
+        flist = super().load_data(flist)
+
+        sents = list()
+        for f in flist:
+            t = self.tokenizer(f, self.prefix, self.tokenprefix,
+                               self.ignore_syntax)
+            sents += t.load_tokens()
+
+        return sents
+
+    def validate(self, executor):
+        futures_list = list()
+        futures_list.append(executor.submit(self.count))
+
+        return futures_list
+
+    def count(self):
+        sents = self.load_data()
+        c = list(map(len, sents))
+
+        return self.output_str(sum(c))
+
+class PomTokenCountValidator(TokenCountValidator):
+    def __init__(self, project, conf, fitclass=NGramModel):
+        super().__init__(project, conf, None, conf.get_pomlist(project),
+                         PomTokenizer, fitclass)
+
+    def output_str(self, count):
+        return f"{self.project},pom,{count}"
+
+class JavaTokenCountValidator(TokenCountValidator):
+    def __init__(self, project, conf, fitclass=NGramModel):
+        super().__init__(project, conf, None, conf.get_srclist(project),
+                         JavaTokenizer, fitclass)
+
+    def output_str(self, count):
+        return f"{self.project},java,{count}"
+
+class VocabSizeValidator(NLPValidator, metaclass=ABCMeta):
+    @abstractmethod
+    def output_str(self, count):
+        raise NotImplementedError()
+
+    def load_data(self, flist=None):
+        flist = super().load_data(flist)
+
+        tokens = set()
+        for f in flist:
+            t = self.tokenizer(f, self.prefix, self.tokenprefix,
+                               self.ignore_syntax)
+            for sent in t.load_tokens():
+                if sent:
+                    flattened = set(sent) if isinstance(sent[0], str) else set(item for sublist in sent for item in sublist)
+                    tokens = tokens.union(flattened)
+
+        return tokens
+
+    def validate(self, executor):
+        futures_list = list()
+        futures_list.append(executor.submit(self.count))
+
+        return futures_list
+
+    def count(self):
+        tokens = self.load_data()
+
+        return self.output_str(len(tokens))
+
+class PomVocabSizeValidator(VocabSizeValidator):
+    def __init__(self, project, conf, fitclass=NGramModel):
+        super().__init__(project, conf, None, conf.get_pomlist(project),
+                         PomTokenizer, fitclass)
+
+    def output_str(self, count):
+        return f"{self.project},pom,{count}"
+
+class JavaVocabSizeValidator(VocabSizeValidator):
+    def __init__(self, project, conf, fitclass=NGramModel):
+        super().__init__(project, conf, None, conf.get_srclist(project),
+                         JavaTokenizer, fitclass)
+
+    def output_str(self, count):
+        return f"{self.project},java,{count}"

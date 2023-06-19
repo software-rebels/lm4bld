@@ -12,6 +12,10 @@ from lm4bld.experiment.validation import JavaTokenizeValidator
 from lm4bld.experiment.validation import PomTokenizeValidator
 from lm4bld.experiment.validation import JavaLocValidator
 from lm4bld.experiment.validation import PomLocValidator
+from lm4bld.experiment.validation import JavaTokenCountValidator
+from lm4bld.experiment.validation import PomTokenCountValidator
+from lm4bld.experiment.validation import JavaVocabSizeValidator
+from lm4bld.experiment.validation import PomVocabSizeValidator
 from lm4bld.experiment.api import Experiment
 
 class CrossFoldExperiment(Experiment):
@@ -62,3 +66,17 @@ class LocExperiment(Experiment):
 
     def getPomValidator(self):
         return PomLocValidator(self.project, self.conf)
+
+class TokenCountExperiment(Experiment):
+    def getSrcValidator(self):
+        return JavaTokenCountValidator(self.project, self.conf)
+
+    def getPomValidator(self):
+        return PomTokenCountValidator(self.project, self.conf)
+
+class VocabSizeExperiment(Experiment):
+    def getSrcValidator(self):
+        return JavaVocabSizeValidator(self.project, self.conf)
+
+    def getPomValidator(self):
+        return PomVocabSizeValidator(self.project, self.conf)

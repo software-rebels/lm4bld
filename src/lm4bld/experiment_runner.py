@@ -8,6 +8,7 @@ from lm4bld.experiment.nlp import CrossProjectTrainModelsExperiment
 from lm4bld.experiment.nlp import NextTokenExperiment
 from lm4bld.experiment.nlp import TokenizeExperiment
 from lm4bld.experiment.nlp import LocExperiment
+from lm4bld.experiment.nlp import TokenCountExperiment
 
 import lm4bld.experiment.config as config
 

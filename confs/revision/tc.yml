@@ -1,0 +1,69 @@
+################################################################################
+# Tokenizer config
+################################################################################
+
+prefix: ../data/sources
+tokenprefix: ../data/tokens/vers-paths
+
+fitpackage: placeholder
+fitclass: placeholder
+ignoresyntax: true
+
+################################################################################
+# Global config
+################################################################################
+
+task: TokenCountExperiment
+
+process_source: true
+process_poms: true
+
+maxjobs: 24 # Size of the process pool to execute tasks in parallel
+
+pomlistdir: pomlists
+srclistdir: javalists
+
+projects:
+- drill
+- qpid
+- plc4x
+- logging
+- uima
+- asterixdb
+- streams
+- ignite
+- brooklyn
+- dubbo
+- druid
+- hive
+- syncope
+- jclouds
+- zeppelin
+- pulsar
+- archiva
+- manifoldcf
+- felix
+- axis
+- hbase
+- isis
+- ambari
+- directory
+- jackrabbit
+- hadoop
+- royale
+- portals
+- commons
+- james
+- aries
+- flink
+- servicecomb
+- karaf
+- activemq
+- nifi
+- tomee
+- cxf
+- camel
+- wildfly
+- wildfly-core
+- wildfly-server-migration
+- jaxb-ri

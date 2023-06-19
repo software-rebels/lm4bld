@@ -5,11 +5,21 @@ from nltk.lm import Lidstone
 from nltk.lm.preprocessing import padded_everygram_pipeline
 from nltk.lm.vocabulary import Vocabulary
 
+import os
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3' 
 import tensorflow as tf
 from tensorflow.keras.layers import Embedding, Dense, LSTM
-from tensorflow.keras.losses import BinaryCrossentropy
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.optimizers import Adam
+
+from numpy import array
+from tensorflow.keras.preprocessing.text import Tokenizer
+from tensorflow.keras.utils import to_categorical
+from tensorflow.keras.preprocessing.sequence import pad_sequences
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Dense
+from tensorflow.keras.layers import LSTM
+from tensorflow.keras.layers import Embedding
 
 class NGramModel:
     def __init__(self, order):
@@ -51,12 +61,13 @@ class NGramModel:
 
 class LSTMModel:
     def __init__(self, order):
-        self.tokenizer = Tokenizer()
+        self.tokenizer = Tokenizer(filters="", oov_token="<OOV>")
+        self.length = None
 
-    def doFit(self, X, y, max_length):
+    def doFit(self, X, y):
         model = Sequential()
         model.add(Embedding(self.vocab_size, 10,
-                            input_length=max_length-1))
+                            input_length=self.length-1))
         model.add(LSTM(300))
         model.add(Dense(self.vocab_size, activation='softmax'))
 
@@ -64,7 +75,7 @@ class LSTMModel:
                       optimizer='adam',
                       metrics=['categorical_crossentropy'])
 
-        model.fit(X, y, batch_size=20, epochs = 13, verbose = 2)
+        model.fit(X, y, batch_size=20, epochs = 1, verbose = 0)
 
         return model
 
@@ -72,18 +83,23 @@ class LSTMModel:
         sequences = list()
 
         for sent in sents:
-            encoded = self.tokenizer.texts_to_sequences(sent)[0]
+            encoded = self.tokenizer.texts_to_sequences(sent)
             for i in range(1, len(encoded)):
                 sequences.append(encoded[:i+1])
 
         # Pad sequences
-        max_length = self.length if self.length is not None else max([len(seq) for seq in sequences])
+        max_length = max([len(seq) for seq in sequences])
+        if self.length is not None:
+            max_length = max([max_length, self.length])
+
         return pad_sequences(sequences, maxlen=max_length, padding='pre')
 
     def seqsToArrays(self, sequences):
         sequences = array(sequences)
         X, y = sequences[:,:-1],sequences[:,-1]
         y = to_categorical(y, num_classes=self.vocab_size)
+
+        return X, y
 
     def fit(self, train_sents):
         # Transform sents
@@ -96,12 +112,12 @@ class LSTMModel:
         self.length = len(sequences[0])
 
         # Fit LSTM RNN
-        self.model = self.doFit()
+        self.model = self.doFit(X, y)
 
     def crossEntropy(self, sents):
         sequences = self.getSequences(sents)
         X, y = self.seqsToArrays(sequences)
-        return self.model.evaluate(X, y, verbose=1)[0]
+        return self.model.evaluate(X, y, verbose=0)[0]
 
     def unkRate(self, sents):
         return -1

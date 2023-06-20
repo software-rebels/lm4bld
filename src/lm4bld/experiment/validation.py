@@ -1,5 +1,6 @@
 from abc import ABCMeta, abstractmethod
 import importlib
+import math
 import os
 from pathlib import Path
 import pickle
@@ -146,6 +147,43 @@ class JavaCrossFoldValidator(CrossFoldValidator):
         unkline = f'{proj},java,{self.fitclassname},unk_rate,{order},{fold},{iteration},{unk_rate}'
         entline = f'{proj},java,{self.fitclassname},entropy,{order},{fold},{iteration},{entropy}'
         vocabline = f'{proj},java,{self.fitclassname},vocab_size,{order},{fold},{iteration},{vocab_size}'
+        return f'{unkline}{os.linesep}{entline}{os.linesep}{vocabline}'
+
+class HoldoutValidator(CrossFoldValidator):
+    def getFolds(self):
+        myList = self.load_data()
+        random.shuffle(myList)
+        split_point = math.floor(len(myList) * 0.6) # TODO: Make configurable
+
+        return myList[:split_point], myList[split_point:]
+
+    def validate(self, executor):
+        train, test = self.getFolds()
+        f = executor.submit(self.nFoldJob, train, test, 0, 0, 0)
+        return [f]
+
+class PomHoldoutValidator(HoldoutValidator):
+    def __init__(self, project, conf, order):
+        super().__init__(project, conf, order, conf.get_pomlist(project),
+                         PomTokenizer, self.lookup_class(conf.get_fitpackage(),
+                                                    conf.get_fitclass()))
+
+    def output_str(self, proj, unk_rate, entropy, vocab_size, order, fold, iteration):
+        unkline = f'{proj},java,{self.fitclassname},unk_rate,{unk_rate}'
+        entline = f'{proj},java,{self.fitclassname},entropy,{entropy}'
+        vocabline = f'{proj},java,{self.fitclassname},vocab_size,{vocab_size}'
+        return f'{unkline}{os.linesep}{entline}{os.linesep}{vocabline}'
+
+class JavaHoldoutValidator(HoldoutValidator):
+    def __init__(self, project, conf, order):
+        super().__init__(project, conf, order, conf.get_srclist(project),
+                         JavaTokenizer, self.lookup_class(conf.get_fitpackage(),
+                                                          conf.get_fitclass()))
+
+    def output_str(self, proj, unk_rate, entropy, vocab_size, order, fold, iteration):
+        unkline = f'{proj},java,{self.fitclassname},unk_rate,{unk_rate}'
+        entline = f'{proj},java,{self.fitclassname},entropy,{entropy}'
+        vocabline = f'{proj},java,{self.fitclassname},vocab_size,{vocab_size}'
         return f'{unkline}{os.linesep}{entline}{os.linesep}{vocabline}'
 
 class CrossProjectTrainModelsValidator(NLPValidator, metaclass=ABCMeta):

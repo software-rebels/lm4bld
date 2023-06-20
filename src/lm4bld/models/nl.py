@@ -7,11 +7,23 @@ from nltk.util import everygrams
 
 from lm4bld.models.api import Model
 
+import os
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 import tensorflow as tf
 from tensorflow.keras.layers import Embedding, Dense, LSTM
-from tensorflow.keras.losses import BinaryCrossentropy
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.optimizers import Adam
+
+from numpy import array
+from tensorflow.keras.preprocessing.text import Tokenizer
+from tensorflow.keras.utils import to_categorical
+from tensorflow.keras.preprocessing.sequence import pad_sequences
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Dense
+from tensorflow.keras.layers import LSTM
+from tensorflow.keras.layers import Embedding
+
+#from tensorflow.keras.losses import BinaryCrossentropy
 
 class NGramModel(Model):
     def __init__(self, order, tokenizer, prefix, tokenprefix, ignore_syntax):
@@ -137,15 +149,26 @@ class NGramModel(Model):
 
         return len(correct), len(incorrect)
 
-# TODO: Make fit with API
-class LSTMModel:
-    def __init__(self):
-        self.tokenizer = Tokenizer()
+class LSTMModel(Model):
+    def __init__(self, order, tokenizer, prefix, tokenprefix, ignore_syntax):
+        super().__init__(order, tokenizer, prefix, tokenprefix, ignore_syntax)
+        self.tflowtokenizer = Tokenizer(filters="", oov_token="<OOV>")
+        self.length = None
 
-    def doFit(self, X, y, max_length):
+    def load_sents(self, flist):
+        sents = list()
+
+        for f in flist:
+            t = self.tokenizer(f, self.prefix, self.tokenprefix,
+                               self.ignore_syntax)
+            sents += t.load_tokens()
+
+        return sents
+
+    def doFit(self, X, y):
         model = Sequential()
         model.add(Embedding(self.vocab_size, 10,
-                            input_length=max_length-1))
+                            input_length=self.length-1))
         model.add(LSTM(300))
         model.add(Dense(self.vocab_size, activation='softmax'))
 
@@ -161,12 +184,15 @@ class LSTMModel:
         sequences = list()
 
         for sent in sents:
-            encoded = self.tokenizer.texts_to_sequences(sent)[0]
+            encoded = self.tflowtokenizer.texts_to_sequences(sent)
             for i in range(1, len(encoded)):
                 sequences.append(encoded[:i+1])
 
         # Pad sequences
-        max_length = self.length if self.length is not None else max([len(seq) for seq in sequences])
+        max_length = max([len(seq) for seq in sequences])
+        if self.length is not None:
+            max_length = max([max_length, self.length])
+
         return pad_sequences(sequences, maxlen=max_length, padding='pre')
 
     def seqsToArrays(self, sequences):
@@ -174,10 +200,14 @@ class LSTMModel:
         X, y = sequences[:,:-1],sequences[:,-1]
         y = to_categorical(y, num_classes=self.vocab_size)
 
-    def fit(self, train_sents):
+        return X, y
+
+    def fit(self, train_files):
+        train_sents = self.load_sents(train_files)
+
         # Transform sents
-        self.tokenizer.fit_on_texts(train_sents)
-        self.vocab_size = len(self.tokenizer.word_index) + 1
+        self.tflowtokenizer.fit_on_texts(train_sents)
+        self.vocab_size = len(self.tflowtokenizer.word_index) + 1
 
         sequences = self.getSequences(train_sents)
         X, y = self.seqsToArrays(sequences)
@@ -185,7 +215,7 @@ class LSTMModel:
         self.length = len(sequences[0])
 
         # Fit LSTM RNN
-        self.model = self.doFit()
+        self.model = self.doFit(X, y)
 
     def crossEntropy(self, sents):
         sequences = self.getSequences(sents)
@@ -195,7 +225,10 @@ class LSTMModel:
     def unkRate(self, sents):
         return -1
 
+    def vocabSize(self):
+        return self.vocab_size
+
     def guessNextToken(self, context, nCandidates):
-        encoded = self.tokenizer.texts_to_sequences(context)[0]
+        encoded = self.tflowtokenizer.texts_to_sequences(context)[0]
         encoded = pad_sequences([encoded], maxlen=self.length, padding='pre')
         yhat = model.predict(encoded, verbose=0)

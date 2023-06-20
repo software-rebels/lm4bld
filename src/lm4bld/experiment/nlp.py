@@ -16,6 +16,8 @@ from lm4bld.experiment.validation import JavaTokenCountValidator
 from lm4bld.experiment.validation import PomTokenCountValidator
 from lm4bld.experiment.validation import JavaVocabSizeValidator
 from lm4bld.experiment.validation import PomVocabSizeValidator
+from lm4bld.experiment.validation import JavaHoldoutValidator
+from lm4bld.experiment.validation import PomHoldoutValidator
 from lm4bld.experiment.api import Experiment
 
 class CrossFoldExperiment(Experiment):
@@ -80,3 +82,10 @@ class VocabSizeExperiment(Experiment):
 
     def getPomValidator(self):
         return PomVocabSizeValidator(self.project, self.conf)
+
+class HoldoutExperiment(Experiment):
+    def getSrcValidator(self):
+        return JavaHoldoutValidator(self.project, self.conf, None)
+
+    def getPomValidator(self):
+        return PomHoldoutValidator(self.project, self.conf, None)

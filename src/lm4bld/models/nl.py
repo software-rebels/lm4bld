@@ -10,18 +10,17 @@ from lm4bld.models.api import Model
 import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 import tensorflow as tf
-from tensorflow.keras.layers import Embedding, Dense, LSTM
-from tensorflow.keras.models import Sequential
-from tensorflow.keras.optimizers import Adam
 
 from numpy import array
-from tensorflow.keras.preprocessing.text import Tokenizer
-from tensorflow.keras.utils import to_categorical
-from tensorflow.keras.preprocessing.sequence import pad_sequences
-from tensorflow.keras.models import Sequential
+from tensorflow.keras.callbacks import ModelCheckpoint
 from tensorflow.keras.layers import Dense
 from tensorflow.keras.layers import LSTM
 from tensorflow.keras.layers import Embedding
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.optimizers import Adam
+from tensorflow.keras.preprocessing.sequence import pad_sequences
+from tensorflow.keras.preprocessing.text import Tokenizer
+from tensorflow.keras.utils import to_categorical
 
 #from tensorflow.keras.losses import BinaryCrossentropy
 
@@ -154,6 +153,7 @@ class LSTMModel(Model):
         super().__init__(order, tokenizer, prefix, tokenprefix, ignore_syntax)
         self.tflowtokenizer = Tokenizer(filters="", oov_token="<OOV>")
         self.length = None
+        self.do_fit = True
 
     def load_sents(self, flist):
         sents = list()
@@ -165,7 +165,7 @@ class LSTMModel(Model):
 
         return sents
 
-    def doFit(self, X, y):
+    def create_model(self, X, y):
         model = Sequential()
         model.add(Embedding(self.vocab_size, 10,
                             input_length=self.length-1))
@@ -175,8 +175,6 @@ class LSTMModel(Model):
         model.compile(loss='categorical_crossentropy',
                       optimizer='adam',
                       metrics=['categorical_crossentropy'])
-
-        model.fit(X, y, batch_size=20, epochs = 13, verbose = 2)
 
         return model
 
@@ -214,13 +212,34 @@ class LSTMModel(Model):
 
         self.length = len(sequences[0])
 
-        # Fit LSTM RNN
-        self.model = self.doFit(X, y)
+        # Create LSTM RNN
+        self.model = self.create_model(X, y)
 
-    def crossEntropy(self, sents):
-        sequences = self.getSequences(sents)
+        # Configure checkpointing
+        checkpoint_path = "training/cp.ckpt"
+        checkpoint_dir = os.path.dirname(checkpoint_path)
+
+        checkpoint_callback = ModelCheckpoint(filepath=checkpoint_path,
+                                              save_weights_only=True, verbose=2)
+
+        if self.do_fit:
+
+            # Fit RNN
+            self.model.fit(X, y, batch_size=20, epochs = 13,
+                           validation_split=0.25,
+                           callbacks=[checkpoint_callback],
+                           verbose = 2)
+
+        else:
+            self.model.load_weights(checkpoint_path)
+
+    def crossEntropy(self, test_files):
+        test_sents = self.load_sents(test_files)
+
+        sequences = self.getSequences(test_sents)
         X, y = self.seqsToArrays(sequences)
-        return self.model.evaluate(X, y, verbose=1)[0]
+
+        return self.model.evaluate(X, y, verbose=2)[0]
 
     def unkRate(self, sents):
         return -1

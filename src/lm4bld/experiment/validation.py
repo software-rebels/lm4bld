@@ -153,7 +153,7 @@ class HoldoutValidator(CrossFoldValidator):
     def getFolds(self):
         myList = self.load_data()
         random.shuffle(myList)
-        split_point = math.floor(len(myList) * 0.6) # TODO: Make configurable
+        split_point = math.floor(len(myList) * 0.8) # TODO: Make configurable
 
         return myList[:split_point], myList[split_point:]
 
@@ -169,9 +169,9 @@ class PomHoldoutValidator(HoldoutValidator):
                                                     conf.get_fitclass()))
 
     def output_str(self, proj, unk_rate, entropy, vocab_size, order, fold, iteration):
-        unkline = f'{proj},java,{self.fitclassname},unk_rate,{unk_rate}'
-        entline = f'{proj},java,{self.fitclassname},entropy,{entropy}'
-        vocabline = f'{proj},java,{self.fitclassname},vocab_size,{vocab_size}'
+        unkline = f'{proj},pom,{self.fitclassname},unk_rate,{unk_rate}'
+        entline = f'{proj},pom,{self.fitclassname},entropy,{entropy}'
+        vocabline = f'{proj},pom,{self.fitclassname},vocab_size,{vocab_size}'
         return f'{unkline}{os.linesep}{entline}{os.linesep}{vocabline}'
 
 class JavaHoldoutValidator(HoldoutValidator):
